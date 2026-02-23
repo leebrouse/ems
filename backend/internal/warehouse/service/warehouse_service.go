@@ -1,0 +1,183 @@
+package service
+
+import (
+	"context"
+	"errors"
+
+	"github.com/leebrouse/ems/backend/warehouse/model"
+	"github.com/leebrouse/ems/backend/warehouse/repository"
+
+	"gorm.io/gorm"
+)
+
+var (
+	ErrInsufficientStock = errors.New("insufficient stock")
+	ErrOptimisticLock    = errors.New("optimistic lock failed")
+)
+
+type WarehouseService interface {
+	// Item
+	CreateItem(ctx context.Context, item *model.Item) (*model.Item, error)
+	GetItem(ctx context.Context, id int64) (*model.Item, error)
+	UpdateItem(ctx context.Context, id int64, name, unit, description string) (*model.Item, error)
+	DeleteItem(ctx context.Context, id int64) error
+	ListItems(ctx context.Context, page, size int, query string) ([]model.Item, int64, error)
+
+	// Warehouse
+	CreateWarehouse(ctx context.Context, name, location string) (*model.Warehouse, error)
+	GetWarehouse(ctx context.Context, id int64) (*model.Warehouse, error)
+	UpdateWarehouse(ctx context.Context, id int64, name, location string) (*model.Warehouse, error)
+	DeleteWarehouse(ctx context.Context, id int64) error
+	ListWarehouses(ctx context.Context) ([]model.Warehouse, error)
+
+	// Inventory
+	GetInventory(ctx context.Context, warehouseID int64) ([]model.Inventory, error)
+	AdjustInventory(ctx context.Context, warehouseID, itemID int64, amount int, referenceType string, referenceID int64) (*model.Inventory, error)
+
+	// Alerts
+	SetThreshold(ctx context.Context, itemID int64, threshold int) error
+	ListAlerts(ctx context.Context) ([]model.ItemThreshold, error)
+}
+
+type warehouseService struct {
+	repo repository.WarehouseRepository
+}
+
+func NewWarehouseService(repo repository.WarehouseRepository) WarehouseService {
+	return &warehouseService{repo: repo}
+}
+
+func (s *warehouseService) CreateItem(ctx context.Context, item *model.Item) (*model.Item, error) {
+	if err := s.repo.CreateItem(ctx, item); err != nil {
+		return nil, err
+	}
+	return item, nil
+}
+
+func (s *warehouseService) GetItem(ctx context.Context, id int64) (*model.Item, error) {
+	return s.repo.GetItem(ctx, id)
+}
+
+func (s *warehouseService) UpdateItem(ctx context.Context, id int64, name, unit, description string) (*model.Item, error) {
+	item, err := s.repo.GetItem(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if name != "" {
+		item.Name = name
+	}
+	if unit != "" {
+		item.Unit = unit
+	}
+	if description != "" {
+		item.Description = description
+	}
+	if err := s.repo.UpdateItem(ctx, item); err != nil {
+		return nil, err
+	}
+	return item, nil
+}
+
+func (s *warehouseService) DeleteItem(ctx context.Context, id int64) error {
+	return s.repo.DeleteItem(ctx, id)
+}
+
+func (s *warehouseService) ListItems(ctx context.Context, page, size int, query string) ([]model.Item, int64, error) {
+	return s.repo.ListItems(ctx, page, size, query)
+}
+
+func (s *warehouseService) CreateWarehouse(ctx context.Context, name, location string) (*model.Warehouse, error) {
+	w := &model.Warehouse{Name: name, Location: location}
+	if err := s.repo.CreateWarehouse(ctx, w); err != nil {
+		return nil, err
+	}
+	return w, nil
+}
+
+func (s *warehouseService) GetWarehouse(ctx context.Context, id int64) (*model.Warehouse, error) {
+	return s.repo.GetWarehouse(ctx, id)
+}
+
+func (s *warehouseService) UpdateWarehouse(ctx context.Context, id int64, name, location string) (*model.Warehouse, error) {
+	w, err := s.repo.GetWarehouse(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if name != "" {
+		w.Name = name
+	}
+	if location != "" {
+		w.Location = location
+	}
+	if err := s.repo.UpdateWarehouse(ctx, w); err != nil {
+		return nil, err
+	}
+	return w, nil
+}
+
+func (s *warehouseService) DeleteWarehouse(ctx context.Context, id int64) error {
+	return s.repo.DeleteWarehouse(ctx, id)
+}
+
+func (s *warehouseService) ListWarehouses(ctx context.Context) ([]model.Warehouse, error) {
+	return s.repo.ListWarehouses(ctx)
+}
+
+func (s *warehouseService) GetInventory(ctx context.Context, warehouseID int64) ([]model.Inventory, error) {
+	return s.repo.GetInventory(ctx, warehouseID)
+}
+
+func (s *warehouseService) AdjustInventory(ctx context.Context, warehouseID, itemID int64, amount int, referenceType string, referenceID int64) (*model.Inventory, error) {
+	var updatedInventory *model.Inventory
+	err := s.repo.WithTransaction(ctx, func(tx *gorm.DB) error {
+		// 1. Get current inventory
+		inv, err := s.repo.GetInventoryByItem(ctx, warehouseID, itemID)
+		if err != nil {
+			return err
+		}
+
+		// 2. Check if subtraction is possible
+		beforeQty := inv.Quantity
+		afterQty := beforeQty + amount
+		if afterQty < 0 {
+			return ErrInsufficientStock
+		}
+
+		// 3. Update inventory
+		inv.Quantity = afterQty
+		inv.Version++
+		if err := s.repo.UpdateInventory(ctx, tx, inv); err != nil {
+			return err
+		}
+
+		// 4. Create log
+		log := &model.InventoryLog{
+			WarehouseID:   warehouseID,
+			ItemID:        itemID,
+			ChangeAmount:  amount,
+			BeforeQty:     beforeQty,
+			AfterQty:      afterQty,
+			ReferenceType: referenceType,
+			ReferenceID:   referenceID,
+		}
+		if err := s.repo.CreateInventoryLog(ctx, tx, log); err != nil {
+			return err
+		}
+
+		updatedInventory = inv
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return updatedInventory, nil
+}
+
+func (s *warehouseService) SetThreshold(ctx context.Context, itemID int64, threshold int) error {
+	return s.repo.SetThreshold(ctx, itemID, threshold)
+}
+
+func (s *warehouseService) ListAlerts(ctx context.Context) ([]model.ItemThreshold, error) {
+	return s.repo.ListAlerts(ctx)
+}

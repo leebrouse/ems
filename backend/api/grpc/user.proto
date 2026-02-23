@@ -17,6 +17,13 @@ service UserService {
   rpc UpdateUser(UpdateUserRequest) returns (UserResponse);
   // 删除用户
   rpc DeleteUser(DeleteUserRequest) returns (google.protobuf.Empty);
+  // 校验用户凭据
+  rpc ValidateCredentials(ValidateCredentialsRequest) returns (UserResponse);
+}
+
+message ValidateCredentialsRequest {
+  string username = 1;
+  string password = 2;
 }
 
 // 消息定义

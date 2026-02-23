@@ -20,11 +20,12 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	UserService_CreateUser_FullMethodName = "/api.v1.user.UserService/CreateUser"
-	UserService_GetUser_FullMethodName    = "/api.v1.user.UserService/GetUser"
-	UserService_ListUsers_FullMethodName  = "/api.v1.user.UserService/ListUsers"
-	UserService_UpdateUser_FullMethodName = "/api.v1.user.UserService/UpdateUser"
-	UserService_DeleteUser_FullMethodName = "/api.v1.user.UserService/DeleteUser"
+	UserService_CreateUser_FullMethodName          = "/api.v1.user.UserService/CreateUser"
+	UserService_GetUser_FullMethodName             = "/api.v1.user.UserService/GetUser"
+	UserService_ListUsers_FullMethodName           = "/api.v1.user.UserService/ListUsers"
+	UserService_UpdateUser_FullMethodName          = "/api.v1.user.UserService/UpdateUser"
+	UserService_DeleteUser_FullMethodName          = "/api.v1.user.UserService/DeleteUser"
+	UserService_ValidateCredentials_FullMethodName = "/api.v1.user.UserService/ValidateCredentials"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -41,6 +42,8 @@ type UserServiceClient interface {
 	UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UserResponse, error)
 	// 删除用户
 	DeleteUser(ctx context.Context, in *DeleteUserRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	// 校验用户凭据
+	ValidateCredentials(ctx context.Context, in *ValidateCredentialsRequest, opts ...grpc.CallOption) (*UserResponse, error)
 }
 
 type userServiceClient struct {
@@ -96,6 +99,15 @@ func (c *userServiceClient) DeleteUser(ctx context.Context, in *DeleteUserReques
 	return out, nil
 }
 
+func (c *userServiceClient) ValidateCredentials(ctx context.Context, in *ValidateCredentialsRequest, opts ...grpc.CallOption) (*UserResponse, error) {
+	out := new(UserResponse)
+	err := c.cc.Invoke(ctx, UserService_ValidateCredentials_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility
@@ -110,6 +122,8 @@ type UserServiceServer interface {
 	UpdateUser(context.Context, *UpdateUserRequest) (*UserResponse, error)
 	// 删除用户
 	DeleteUser(context.Context, *DeleteUserRequest) (*empty.Empty, error)
+	// 校验用户凭据
+	ValidateCredentials(context.Context, *ValidateCredentialsRequest) (*UserResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -131,6 +145,9 @@ func (UnimplementedUserServiceServer) UpdateUser(context.Context, *UpdateUserReq
 }
 func (UnimplementedUserServiceServer) DeleteUser(context.Context, *DeleteUserRequest) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteUser not implemented")
+}
+func (UnimplementedUserServiceServer) ValidateCredentials(context.Context, *ValidateCredentialsRequest) (*UserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidateCredentials not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 
@@ -235,6 +252,24 @@ func _UserService_DeleteUser_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_ValidateCredentials_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidateCredentialsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).ValidateCredentials(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_ValidateCredentials_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).ValidateCredentials(ctx, req.(*ValidateCredentialsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -261,6 +296,10 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteUser",
 			Handler:    _UserService_DeleteUser_Handler,
+		},
+		{
+			MethodName: "ValidateCredentials",
+			Handler:    _UserService_ValidateCredentials_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

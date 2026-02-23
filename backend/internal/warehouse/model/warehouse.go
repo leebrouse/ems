@@ -77,3 +77,17 @@ type InventoryLog struct {
 func (InventoryLog) TableName() string {
 	return "inventory_logs"
 }
+
+// ItemThreshold 库存阈值模型
+type ItemThreshold struct {
+	ID        int64 `gorm:"primaryKey;autoIncrement"`
+	ItemID    int64 `gorm:"not null;uniqueIndex"`
+	Threshold int   `gorm:"not null"`
+	UpdatedAt time.Time
+
+	Item Item `gorm:"foreignKey:ItemID"`
+}
+
+func (ItemThreshold) TableName() string {
+	return "item_thresholds"
+}
