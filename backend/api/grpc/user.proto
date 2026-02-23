@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package api.v1.user;
+
+option go_package = "ems/api/user;user";
+
+import "google/protobuf/empty.proto";
+
+service UserService {
+  // 创建用户
+  rpc CreateUser(CreateUserRequest) returns (UserResponse);
+  // 根据ID获取用户
+  rpc GetUser(GetUserRequest) returns (UserResponse);
+  // 列出所有用户
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+  // 更新用户
+  rpc UpdateUser(UpdateUserRequest) returns (UserResponse);
+  // 删除用户
+  rpc DeleteUser(DeleteUserRequest) returns (google.protobuf.Empty);
+}
+
+// 消息定义
+message CreateUserRequest {
+  string username = 1;
+  string password = 2;
+  repeated string roles = 3;
+}
+message GetUserRequest { int32 id = 1; }
+message ListUsersRequest { int32 page = 1; int32 size = 2; }
+message UpdateUserRequest {
+  int32 id = 1;
+  string password = 2;
+  repeated string roles = 3;
+}
+message DeleteUserRequest { int32 id = 1; }
+
+message UserResponse {
+  int32 id = 1;
+  string username = 2;
+  repeated string roles = 3;
+}
+message ListUsersResponse {
+  int32 total = 1;
+  repeated UserResponse users = 2;
+}

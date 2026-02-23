@@ -1,0 +1,21 @@
+service:
+  auth:
+  user:
+  stock:
+  order:
+  logistics:
+  statistics:
+
+postgres:
+  host: "127.0.0.1"
+  port: "5432"
+  user: "root"
+  password: "123456"      
+
+security:
+  encryption_key: "emergency-system-aes-key-32chars"
+
+gaode_maps:
+  api_key: "bff42bf37382382b61e29c13b4964ad4"
+  base_url: "https://restapi.amap.com"
+

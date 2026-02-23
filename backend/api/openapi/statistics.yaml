@@ -1,0 +1,105 @@
+openapi: 3.0.0
+info:
+  title: Statistics Service API
+  version: 1.0.0
+  description: Statistical analysis for the Rescue Management System
+paths:
+  /api/v1/stats/inventory:
+    get:
+      summary: Inventory Statistics
+      operationId: getInventoryStats
+      tags:
+        - Statistics
+      responses:
+        '200':
+          description: Inventory statistics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    itemId:
+                      type: integer
+                      format: int32
+                    name:
+                      type: string
+                    totalQuantity:
+                      type: integer
+                      format: int32
+  /api/v1/stats/requests:
+    get:
+      summary: Request Statistics
+      operationId: getRequestStats
+      tags:
+        - Statistics
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Request statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  startDate:
+                    type: string
+                  endDate:
+                    type: string
+                  totalRequests:
+                    type: integer
+                    format: int32
+                  byStatus:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                      format: int32
+  /api/v1/stats/shipments:
+    get:
+      summary: Shipment Statistics
+      operationId: getShipmentStats
+      tags:
+        - Statistics
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [weekly, monthly]
+      responses:
+        '200':
+          description: Shipment statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  period:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        week:
+                          type: string
+                        count:
+                          type: integer
+                          format: int32
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - bearerAuth: []

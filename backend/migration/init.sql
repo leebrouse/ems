@@ -1,0 +1,4 @@
+-- Active: 1771856480472@@127.0.0.1@5432@postgres
+CREATE DATABASE auth;
+CREATE DATABASE user;
+CREATE DATABASE warehouse;

@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package api.v1.statistics;
+
+option go_package = "ems/api/statistics;statistics";
+
+import "google/protobuf/empty.proto";
+
+service StatisticsService {
+  rpc GetInventoryStats(google.protobuf.Empty) returns (InventoryStatsResponse);
+  rpc GetRequestStats(StatsRequest) returns (RequestStatsResponse);
+  rpc GetShipmentStats(StatsRequest) returns (ShipmentStatsResponse);
+}
+
+message StatsRequest {
+  string startDate = 1;
+  string endDate = 2;
+}
+message InventoryStatsResponse {
+  repeated ItemStock items = 1;
+}
+message ItemStock { int32 itemId = 1; string name = 2; int32 totalQuantity = 3; }
+
+message RequestStatsResponse {
+  string startDate = 1;
+  string endDate = 2;
+  int32 totalRequests = 3;
+  map<string,int32> byStatus = 4;
+}
+message ShipmentStatsResponse {
+  string period = 1;
+  repeated ShipmentCount data = 2;
+}
+message ShipmentCount { string periodLabel = 1; int32 count = 2; }

@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package api.v1.warehouse;
+
+option go_package = "ems/api/warehouse;warehouse";
+
+import "google/protobuf/empty.proto";
+
+service WarehouseService {
+  rpc ListItems(ListItemsRequest) returns (ListItemsResponse);
+  rpc GetItem(GetItemRequest) returns (ItemResponse);
+  rpc CreateItem(CreateItemRequest) returns (ItemResponse);
+  rpc UpdateItem(UpdateItemRequest) returns (ItemResponse);
+  rpc DeleteItem(DeleteItemRequest) returns (google.protobuf.Empty);
+
+  rpc ListWarehouses(ListWarehousesRequest) returns (ListWarehousesResponse);
+  rpc GetWarehouse(GetWarehouseRequest) returns (WarehouseResponse);
+  rpc CreateWarehouse(CreateWarehouseRequest) returns (WarehouseResponse);
+  rpc UpdateWarehouse(UpdateWarehouseRequest) returns (WarehouseResponse);
+  rpc DeleteWarehouse(DeleteWarehouseRequest) returns (google.protobuf.Empty);
+
+  rpc AdjustInventory(AdjustInventoryRequest) returns (InventoryResponse);
+}
+
+message ListItemsRequest { int32 page = 1; int32 size = 2; string query = 3; }
+message ListItemsResponse { int32 total = 1; repeated ItemResponse items = 2; }
+message GetItemRequest { int32 itemId = 1; }
+message CreateItemRequest { string name = 1; string unit = 2; string description = 3; }
+message UpdateItemRequest { int32 itemId = 1; string name = 2; string unit = 3; string description = 4; }
+message DeleteItemRequest { int32 itemId = 1; }
+
+message ItemResponse { int32 id = 1; string name = 2; string unit = 3; string description = 4; }
+
+message ListWarehousesRequest {}
+message ListWarehousesResponse { repeated WarehouseResponse warehouses = 1; }
+message GetWarehouseRequest { int32 id = 1; }
+message CreateWarehouseRequest { string name = 1; string location = 2; }
+message UpdateWarehouseRequest { int32 id = 1; string name = 2; string location = 3; }
+message DeleteWarehouseRequest { int32 id = 1; }
+
+message WarehouseResponse { int32 id = 1; string name = 2; string location = 3; }
+
+message AdjustInventoryRequest {
+  int32 warehouseId = 1;
+  int32 itemId = 2;
+  int32 amount = 3; // 正数为入库，负数为出库
+}
+message InventoryResponse { int32 itemId = 1; int32 quantity = 2; }

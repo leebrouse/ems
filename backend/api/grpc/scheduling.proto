@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package api.v1.scheduling;
+
+option go_package = "ems/api/scheduling;scheduling";
+
+import "google/protobuf/empty.proto";
+
+service SchedulingService {
+  rpc CreateRequest(CreateRequestProto) returns (RequestResponse);
+  rpc ListRequests(ListRequestsProto) returns (ListRequestsResponse);
+  rpc GetRequest(GetRequestProto) returns (RequestResponse);
+  rpc UpdateRequest(UpdateRequestProto) returns (RequestResponse);
+  rpc DeleteRequest(DeleteRequestProto) returns (google.protobuf.Empty);
+
+  rpc CreateShipment(CreateShipmentProto) returns (ShipmentResponse);
+  rpc UpdateShipmentStatus(UpdateShipmentProto) returns (ShipmentResponse);
+  rpc ListShipments(ListShipmentsProto) returns (ListShipmentsResponse);
+  rpc GetShipment(GetShipmentProto) returns (ShipmentResponse);
+}
+
+message CreateRequestProto {
+  string title = 1;
+  string location = 2;
+  repeated ItemQuantity items = 3;
+}
+message RequestResponse {
+  int32 id = 1;
+  string title = 2;
+  string location = 3;
+  repeated ItemQuantity items = 4;
+  string status = 5;
+  int32 assignedTo = 6;
+}
+message ListRequestsProto { int32 page = 1; int32 size = 2; string status = 3; }
+message ListRequestsResponse { int32 total = 1; repeated RequestResponse requests = 2; }
+message GetRequestProto { int32 id = 1; }
+message UpdateRequestProto { int32 id = 1; string status = 2; int32 assignedTo = 3; }
+message DeleteRequestProto { int32 id = 1; }
+
+message CreateShipmentProto {
+  int32 requestId = 1;
+  int32 fromWarehouseId = 2;
+  string toLocation = 3;
+  repeated ItemQuantity items = 4;
+}
+message ShipmentResponse {
+  int32 shipmentId = 1;
+  int32 requestId = 2;
+  int32 fromWarehouseId = 3;
+  string toLocation = 4;
+  string status = 5;
+  repeated TrackingInfo tracking = 6;
+}
+message ListShipmentsProto { int32 page = 1; int32 size = 2; string status = 3; }
+message ListShipmentsResponse { int32 total = 1; repeated ShipmentResponse shipments = 2; }
+message GetShipmentProto { int32 shipmentId = 1; }
+message UpdateShipmentProto {
+  int32 shipmentId = 1;
+  string status = 2;
+  string location = 3;
+  string timestamp = 4;
+}
+
+message ItemQuantity { int32 itemId = 1; int32 quantity = 2; }
+message TrackingInfo {
+  string status = 1;
+  string location = 2;
+  string timestamp = 3;
+}
