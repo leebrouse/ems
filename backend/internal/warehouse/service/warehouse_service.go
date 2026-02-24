@@ -14,7 +14,7 @@ var (
 	// ErrInsufficientStock 表示库存不足
 	ErrInsufficientStock = errors.New("insufficient stock")
 	// ErrOptimisticLock 表示乐观锁更新失败
-	ErrOptimisticLock    = errors.New("optimistic lock failed")
+	ErrOptimisticLock = errors.New("optimistic lock failed")
 )
 
 // WarehouseService 定义仓库领域业务能力
@@ -39,7 +39,7 @@ type WarehouseService interface {
 
 	// Alerts
 	SetThreshold(ctx context.Context, itemID int64, threshold int) error
-	ListAlerts(ctx context.Context) ([]model.ItemThreshold, error)
+	ListAlerts(ctx context.Context) ([]model.InventoryAlert, error)
 }
 
 // warehouseService 是 WarehouseService 的默认实现
@@ -197,6 +197,6 @@ func (s *warehouseService) SetThreshold(ctx context.Context, itemID int64, thres
 }
 
 // ListAlerts 查询库存预警
-func (s *warehouseService) ListAlerts(ctx context.Context) ([]model.ItemThreshold, error) {
+func (s *warehouseService) ListAlerts(ctx context.Context) ([]model.InventoryAlert, error) {
 	return s.repo.ListAlerts(ctx)
 }

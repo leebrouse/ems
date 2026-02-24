@@ -1,115 +1,240 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import * as echarts from 'echarts'
-import { 
-  Package, 
-  Truck, 
-  AlertTriangle, 
+import { ref, onMounted } from "vue";
+import * as echarts from "echarts";
+import {
+  Package,
+  Truck,
+  AlertTriangle,
   TrendingUp,
-  Box
-} from 'lucide-vue-next'
-import request from '../api/request'
+  Box,
+} from "lucide-vue-next";
+import request from "../api/request";
 
-type InventoryStat = { itemId: number; name: string; totalQuantity: number }
-type ShipmentStatPoint = { week?: string; periodLabel?: string; count: number }
+type InventoryStat = { itemId: number; name: string; totalQuantity: number };
+type ShipmentStatPoint = { week?: string; periodLabel?: string; count: number };
+type Warehouse = { id: number; name: string; location?: string };
+type InventoryRow = { itemId: number; name: string; quantity: number };
+
+const normalizeWarehouse = (raw: any): Warehouse => ({
+  id: Number(raw?.id ?? raw?.ID ?? 0),
+  name: String(raw?.name ?? raw?.Name ?? ""),
+  location: raw?.location ?? raw?.Location ?? undefined,
+});
+
+const normalizeInventoryRow = (raw: any): InventoryRow => {
+  const item = raw?.item ?? raw?.Item ?? {};
+  return {
+    itemId: Number(raw?.itemId ?? raw?.ItemID ?? item?.id ?? item?.ID ?? 0),
+    name: String(raw?.name ?? raw?.Name ?? item?.name ?? item?.Name ?? ""),
+    quantity: Number(raw?.quantity ?? raw?.Quantity ?? 0),
+  };
+};
+
+const normalizeInventoryStat = (raw: any): InventoryStat => ({
+  itemId: Number(raw?.itemId ?? raw?.ItemID ?? 0),
+  name: String(raw?.name ?? raw?.Name ?? ""),
+  totalQuantity: Number(
+    raw?.totalQuantity ??
+      raw?.TotalQuantity ??
+      raw?.quantity ??
+      raw?.Quantity ??
+      0
+  ),
+});
 
 const stats = ref({
   totalInventory: 0,
   inTransitShipments: 0,
   pendingRequests: 0,
   alerts: 0,
-})
+});
 
-const barChartRef = ref<HTMLElement | null>(null)
-const pieChartRef = ref<HTMLElement | null>(null)
+const barChartRef = ref<HTMLElement | null>(null);
+const pieChartRef = ref<HTMLElement | null>(null);
 
-const initCharts = (shipmentSeries?: { labels: string[]; counts: number[] }, inventorySeries?: { labels: string[]; values: number[] }) => {
+const initCharts = (
+  shipmentSeries?: { labels: string[]; counts: number[] },
+  inventorySeries?: { labels: string[]; values: number[] }
+) => {
   if (barChartRef.value) {
-    const chart = echarts.init(barChartRef.value, 'dark')
-    const labels = shipmentSeries?.labels ?? []
-    const counts = shipmentSeries?.counts ?? []
+    const chart = echarts.init(barChartRef.value, "dark");
+    const labels = shipmentSeries?.labels ?? [];
+    const counts = shipmentSeries?.counts ?? [];
     chart.setOption({
-      backgroundColor: 'transparent',
-      tooltip: { trigger: 'axis' },
-      xAxis: { type: 'category', data: labels },
-      yAxis: { type: 'value' },
-      series: [{
-        data: counts,
-        type: 'line',
-        smooth: true,
-        itemStyle: { color: '#58a6ff' }
-      }]
-    })
+      backgroundColor: "transparent",
+      tooltip: { trigger: "axis" },
+      xAxis: { type: "category", data: labels },
+      yAxis: { type: "value" },
+      series: [
+        {
+          data: counts,
+          type: "line",
+          smooth: true,
+          itemStyle: { color: "#58a6ff" },
+        },
+      ],
+    });
   }
-  
+
   if (pieChartRef.value) {
-    const chart = echarts.init(pieChartRef.value, 'dark')
-    const labels = inventorySeries?.labels ?? []
-    const values = inventorySeries?.values ?? []
+    const chart = echarts.init(pieChartRef.value, "dark");
+    const labels = inventorySeries?.labels ?? [];
+    const values = inventorySeries?.values ?? [];
     chart.setOption({
-      backgroundColor: 'transparent',
-      tooltip: { trigger: 'item' },
-      series: [{
-        type: 'pie',
-        radius: ['40%', '70%'],
-        data: labels.map((name, i) => ({ name, value: values[i] })),
-        itemStyle: {
-          borderRadius: 8,
-          borderColor: '#161b22',
-          borderWidth: 2
-        }
-      }]
-    })
+      backgroundColor: "transparent",
+      tooltip: { trigger: "item" },
+      series: [
+        {
+          type: "pie",
+          radius: ["40%", "70%"],
+          data: labels.map((name, i) => ({ name, value: values[i] })),
+          itemStyle: {
+            borderRadius: 8,
+            borderColor: "#161b22",
+            borderWidth: 2,
+          },
+        },
+      ],
+    });
   }
-}
+};
+
+const fetchInventoryFromWarehouses = async (): Promise<InventoryStat[]> => {
+  const warehousesRes: any = await request.get("/api/v1/warehouses");
+  const warehousesRaw =
+    warehousesRes?.warehouses ??
+    warehousesRes?.Warehouses ??
+    warehousesRes ??
+    [];
+  const warehouses = Array.isArray(warehousesRaw)
+    ? warehousesRaw.map(normalizeWarehouse)
+    : [];
+  if (!warehouses.length) return [];
+
+  const inventoryResponses = await Promise.all(
+    warehouses.map((warehouse) =>
+      request
+        .get(`/api/v1/warehouses/${warehouse.id}/inventory`)
+        .catch(() => [])
+    )
+  );
+
+  const aggregates = new Map<number, InventoryStat>();
+  inventoryResponses.forEach((res: any) => {
+    const list = res?.inventory ?? res?.Inventory ?? res ?? [];
+    const rows = Array.isArray(list) ? list.map(normalizeInventoryRow) : [];
+    rows.forEach((row) => {
+      const current = aggregates.get(row.itemId);
+      if (!current) {
+        aggregates.set(row.itemId, {
+          itemId: row.itemId,
+          name: row.name,
+          totalQuantity: row.quantity,
+        });
+        return;
+      }
+      aggregates.set(row.itemId, {
+        itemId: row.itemId,
+        name: current.name || row.name,
+        totalQuantity: current.totalQuantity + row.quantity,
+      });
+    });
+  });
+
+  return [...aggregates.values()];
+};
+
+const fetchInventoryStats = async (): Promise<InventoryStat[]> => {
+  try {
+    const inventoryStatsRes: any = await request.get("/api/v1/stats/inventory");
+    const list = Array.isArray(inventoryStatsRes)
+      ? inventoryStatsRes
+      : inventoryStatsRes?.items ?? inventoryStatsRes?.Items ?? [];
+    const stats = Array.isArray(list) ? list.map(normalizeInventoryStat) : [];
+    const total = stats.reduce(
+      (sum, item) => sum + (Number(item.totalQuantity) || 0),
+      0
+    );
+    if (stats.length && total > 0) return stats;
+  } catch {}
+  return await fetchInventoryFromWarehouses();
+};
 
 const fetchStats = async () => {
   try {
-    const [inventoryStatsRes, inTransitShipmentsRes, pendingRequestsRes, alertsRes, shipmentStatsRes] = await Promise.all([
-      request.get('/api/v1/stats/inventory'),
-      request.get('/api/v1/shipments', { params: { page: 1, size: 1, status: 'IN_TRANSIT' } }),
-      request.get('/api/v1/requests', { params: { page: 1, size: 1, status: 'PENDING' } }),
-      request.get('/api/v1/alerts'),
-      request.get('/api/v1/stats/shipments', { params: { period: 'weekly' } }),
-    ])
+    const [
+      inventoryStats,
+      inTransitShipmentsRes,
+      pendingRequestsRes,
+      alertsRes,
+      shipmentStatsRes,
+    ] = await Promise.all([
+      fetchInventoryStats(),
+      request.get("/api/v1/shipments", {
+        params: { page: 1, size: 1, status: "IN_TRANSIT" },
+      }),
+      request.get("/api/v1/requests", {
+        params: { page: 1, size: 1, status: "PENDING" },
+      }),
+      request.get("/api/v1/alerts"),
+      request.get("/api/v1/stats/shipments", { params: { period: "weekly" } }),
+    ]);
 
-    const inventoryStats = (inventoryStatsRes as any) as InventoryStat[]
-    const inTransitTotal = Number((inTransitShipmentsRes as any)?.total) || 0
-    const pendingTotal = Number((pendingRequestsRes as any)?.total) || 0
-    const shipmentStats = (shipmentStatsRes as any) as { period: string; data: ShipmentStatPoint[] }
+    const inTransitTotal = Number((inTransitShipmentsRes as any)?.total) || 0;
+    const pendingTotal = Number((pendingRequestsRes as any)?.total) || 0;
+    const shipmentStats = shipmentStatsRes as any as {
+      period: string;
+      data: ShipmentStatPoint[];
+    };
 
-    const totalInventory = (inventoryStats ?? []).reduce((sum: number, item: InventoryStat) => sum + (Number(item.totalQuantity) || 0), 0)
-    const alertsCount = Array.isArray(alertsRes) ? (alertsRes as any[]).length : 0
+    const totalInventory = (inventoryStats ?? []).reduce(
+      (sum: number, item: InventoryStat) =>
+        sum + (Number(item.totalQuantity) || 0),
+      0
+    );
+    const alertsList = Array.isArray(alertsRes)
+      ? alertsRes
+      : (alertsRes as any)?.alerts ?? (alertsRes as any)?.Alerts ?? [];
+    const alertsCount = Array.isArray(alertsList) ? alertsList.length : 0;
 
-    const shipmentPoints = Array.isArray(shipmentStats?.data) ? shipmentStats.data : []
-    const shipmentLabels = shipmentPoints.map(p => p.week || p.periodLabel || '').filter(Boolean)
-    const shipmentCounts = shipmentPoints.map(p => Number(p.count) || 0)
+    const shipmentPoints = Array.isArray(shipmentStats?.data)
+      ? shipmentStats.data
+      : [];
+    const shipmentLabels = shipmentPoints
+      .map((p) => p.week || p.periodLabel || "")
+      .filter(Boolean);
+    const shipmentCounts = shipmentPoints.map((p) => Number(p.count) || 0);
 
     const topInventory = [...(inventoryStats ?? [])]
-      .sort((a, b) => (Number(b.totalQuantity) || 0) - (Number(a.totalQuantity) || 0))
-      .slice(0, 6)
-    const inventoryLabels = topInventory.map(i => i.name)
-    const inventoryValues = topInventory.map(i => Number(i.totalQuantity) || 0)
+      .sort(
+        (a, b) =>
+          (Number(b.totalQuantity) || 0) - (Number(a.totalQuantity) || 0)
+      )
+      .slice(0, 6);
+    const inventoryLabels = topInventory.map((i) => i.name);
+    const inventoryValues = topInventory.map(
+      (i) => Number(i.totalQuantity) || 0
+    );
 
     stats.value = {
       totalInventory,
       inTransitShipments: inTransitTotal,
       pendingRequests: pendingTotal,
       alerts: alertsCount,
-    }
+    };
 
     initCharts(
       { labels: shipmentLabels, counts: shipmentCounts },
-      { labels: inventoryLabels, values: inventoryValues },
-    )
-  } catch (err) {
-    initCharts({ labels: [], counts: [] }, { labels: [], values: [] })
+      { labels: inventoryLabels, values: inventoryValues }
+    );
+  } catch {
+    initCharts({ labels: [], counts: [] }, { labels: [], values: [] });
   }
-}
+};
 
 onMounted(() => {
-  fetchStats()
-})
+  fetchStats();
+});
 </script>
 
 <template>
@@ -123,7 +248,9 @@ onMounted(() => {
           </div>
         </template>
         <div class="card-value">{{ stats.totalInventory }}</div>
-        <div class="card-desc"><TrendingUp :size="14" /> 统计来自库存汇总接口</div>
+        <div class="card-desc">
+          <TrendingUp :size="14" /> 统计来自仓库库存汇总
+        </div>
       </el-card>
 
       <el-card class="dashboard-card" shadow="never">
@@ -165,7 +292,7 @@ onMounted(() => {
         <template #header>运输量趋势（按周）</template>
         <div ref="barChartRef" class="chart-container"></div>
       </el-card>
-      
+
       <el-card class="chart-card" shadow="never">
         <template #header>库存分布（Top）</template>
         <div ref="pieChartRef" class="chart-container"></div>
@@ -215,10 +342,18 @@ onMounted(() => {
   height: 20px;
 }
 
-.blue { color: #58a6ff; }
-.purple { color: #bc8cff; }
-.orange { color: #ffa657; }
-.red { color: #ff7b72; }
+.blue {
+  color: #58a6ff;
+}
+.purple {
+  color: #bc8cff;
+}
+.orange {
+  color: #ffa657;
+}
+.red {
+  color: #ff7b72;
+}
 
 .charts-grid {
   display: grid;

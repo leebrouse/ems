@@ -91,3 +91,11 @@ type ItemThreshold struct {
 func (ItemThreshold) TableName() string {
 	return "item_thresholds"
 }
+
+// InventoryAlert 库存预警聚合结果
+type InventoryAlert struct {
+	ItemID    int64  `gorm:"column:item_id"`
+	Name      string `gorm:"column:name"`
+	Quantity  int    `gorm:"column:quantity"`
+	Threshold int    `gorm:"column:threshold"`
+}

@@ -24,6 +24,38 @@ type AlertRow = {
   threshold: number;
 };
 
+const normalizeItem = (raw: any): Item => ({
+  id: Number(raw?.id ?? raw?.ID ?? raw?.itemId ?? raw?.ItemID ?? 0),
+  name: String(raw?.name ?? raw?.Name ?? ""),
+  unit: String(raw?.unit ?? raw?.Unit ?? ""),
+  description: raw?.description ?? raw?.Description ?? undefined,
+});
+
+const normalizeWarehouse = (raw: any): Warehouse => ({
+  id: Number(raw?.id ?? raw?.ID ?? 0),
+  name: String(raw?.name ?? raw?.Name ?? ""),
+  location: raw?.location ?? raw?.Location ?? undefined,
+});
+
+const normalizeInventory = (raw: any): InventoryRow => {
+  const item = raw?.item ?? raw?.Item ?? {};
+  return {
+    itemId: Number(raw?.itemId ?? raw?.ItemID ?? item?.id ?? item?.ID ?? 0),
+    name: String(raw?.name ?? raw?.Name ?? item?.name ?? item?.Name ?? ""),
+    quantity: Number(raw?.quantity ?? raw?.Quantity ?? 0),
+  };
+};
+
+const normalizeAlert = (raw: any): AlertRow => {
+  const item = raw?.item ?? raw?.Item ?? {};
+  return {
+    itemId: Number(raw?.itemId ?? raw?.ItemID ?? item?.id ?? item?.ID ?? 0),
+    name: String(raw?.name ?? raw?.Name ?? item?.name ?? item?.Name ?? ""),
+    quantity: Number(raw?.quantity ?? raw?.Quantity ?? 0),
+    threshold: Number(raw?.threshold ?? raw?.Threshold ?? 0),
+  };
+};
+
 const authStore = useAuthStore();
 const activeTab = ref<"items" | "warehouses" | "inventory" | "alerts">("items");
 
@@ -49,8 +81,10 @@ const loadItems = async () => {
     const res: any = await request.get("/api/v1/items", {
       params: { ...itemsQuery, query: itemsQuery.query || undefined },
     });
-    itemsData.value = res?.items ?? [];
-    itemsTotal.value = Number(res?.total) || 0;
+    const list = res?.items ?? res?.Items ?? res ?? [];
+    itemsData.value = Array.isArray(list) ? list.map(normalizeItem) : [];
+    itemsTotal.value =
+      Number(res?.total ?? res?.Total) || itemsData.value.length;
   } finally {
     itemsLoading.value = false;
   }
@@ -60,14 +94,18 @@ const loadItemsOptions = async () => {
   const res: any = await request.get("/api/v1/items", {
     params: { page: 1, size: 1000 },
   });
-  itemsOptions.value = res?.items ?? [];
+  const list = res?.items ?? res?.Items ?? res ?? [];
+  itemsOptions.value = Array.isArray(list) ? list.map(normalizeItem) : [];
 };
 
 const loadWarehouses = async () => {
   warehousesLoading.value = true;
   try {
     const res: any = await request.get("/api/v1/warehouses");
-    warehousesData.value = res ?? [];
+    const list = res?.warehouses ?? res?.Warehouses ?? res ?? [];
+    warehousesData.value = Array.isArray(list)
+      ? list.map(normalizeWarehouse)
+      : [];
     const first = warehousesData.value[0];
     if (!selectedWarehouseId.value && first)
       selectedWarehouseId.value = first.id;
@@ -83,7 +121,10 @@ const loadInventory = async () => {
     const res: any = await request.get(
       `/api/v1/warehouses/${selectedWarehouseId.value}/inventory`
     );
-    inventoryData.value = res ?? [];
+    const list = res?.inventory ?? res?.Inventory ?? res ?? [];
+    inventoryData.value = Array.isArray(list)
+      ? list.map(normalizeInventory)
+      : [];
   } finally {
     inventoryLoading.value = false;
   }
@@ -93,7 +134,8 @@ const loadAlerts = async () => {
   alertsLoading.value = true;
   try {
     const res: any = await request.get("/api/v1/alerts");
-    alertsData.value = res ?? [];
+    const list = res?.alerts ?? res?.Alerts ?? res ?? [];
+    alertsData.value = Array.isArray(list) ? list.map(normalizeAlert) : [];
   } finally {
     alertsLoading.value = false;
   }
@@ -376,7 +418,7 @@ onMounted(async () => {
           :current-page="itemsQuery.page"
           :total="itemsTotal"
           @current-change="
-            (p) => {
+            (p: number) => {
               itemsQuery.page = p;
               loadItems();
             }

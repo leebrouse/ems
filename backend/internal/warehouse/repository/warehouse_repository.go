@@ -31,7 +31,7 @@ type WarehouseRepository interface {
 
 	// Threshold operations
 	SetThreshold(ctx context.Context, itemID int64, threshold int) error
-	ListAlerts(ctx context.Context) ([]model.ItemThreshold, error)
+	ListAlerts(ctx context.Context) ([]model.InventoryAlert, error)
 
 	// Logs
 	CreateInventoryLog(ctx context.Context, tx *gorm.DB, log *model.InventoryLog) error
@@ -178,15 +178,16 @@ func (r *warehouseRepository) SetThreshold(ctx context.Context, itemID int64, th
 }
 
 // ListAlerts 获取库存预警列表
-func (r *warehouseRepository) ListAlerts(ctx context.Context) ([]model.ItemThreshold, error) {
-	var alerts []model.ItemThreshold
-	// Join inventory and item_thresholds to find where quantity < threshold
-	// This is a simplified version. A more efficient query might be needed.
+func (r *warehouseRepository) ListAlerts(ctx context.Context) ([]model.InventoryAlert, error) {
+	var alerts []model.InventoryAlert
 	err := r.db.WithContext(ctx).
-		Preload("Item").
-		Joins("JOIN inventory ON inventory.item_id = item_thresholds.item_id").
-		Where("inventory.quantity < item_thresholds.threshold").
-		Find(&alerts).Error
+		Table("item_thresholds").
+		Select("item_thresholds.item_id, items.name, COALESCE(SUM(inventory.quantity), 0) as quantity, item_thresholds.threshold").
+		Joins("JOIN items ON items.id = item_thresholds.item_id").
+		Joins("LEFT JOIN inventory ON inventory.item_id = item_thresholds.item_id").
+		Group("item_thresholds.item_id, items.name, item_thresholds.threshold").
+		Having("COALESCE(SUM(inventory.quantity), 0) < item_thresholds.threshold").
+		Scan(&alerts).Error
 	return alerts, err
 }
 
