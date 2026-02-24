@@ -262,6 +262,7 @@ const shipmentForm = reactive({
   items: [] as { itemId: number | null; quantity: number }[],
 });
 
+// 打开新建运输任务弹窗
 const openCreateShipment = () => {
   shipmentDialogMode.value = "create";
   shipmentForm.shipmentId = 0;
@@ -272,6 +273,7 @@ const openCreateShipment = () => {
   shipmentDialogVisible.value = true;
 };
 
+// 加载运输任务对应的需求单明细
 const loadRequestForShipment = async () => {
   if (!shipmentForm.requestId) {
     ElMessage.warning("请先输入需求单 ID");
@@ -352,6 +354,12 @@ const selectedShipment = ref<Shipment | null>(null);
 
 const mapContainer = ref<HTMLElement | null>(null);
 let map: any = null;
+let amapApi: any = null;
+let geocoder: any = null;
+let driving: any = null;
+const drivingSummary = ref<{ distance: number; time: number } | null>(null);
+const amapKey = "0282382759b77d9371ab6f78e022bfeb";
+const amapSecurityCode = "3512fe5d4078e94b9dca5b2f2f8cb6eb";
 
 const loadSelectedShipment = async () => {
   if (!selectedShipmentId.value) return;
@@ -359,6 +367,29 @@ const loadSelectedShipment = async () => {
     `/api/v1/shipments/${selectedShipmentId.value}`
   );
   selectedShipment.value = normalizeShipment(res ?? {});
+};
+
+const ensureAmapApi = async () => {
+  if (amapApi) return amapApi;
+  try {
+    if (amapSecurityCode) {
+      (window as any)._AMapSecurityConfig = {
+        securityJsCode: amapSecurityCode,
+      };
+    }
+    const AMap = await (AMapLoader as any).load({
+      key: amapKey,
+      securityJsCode: amapSecurityCode,
+      version: "2.0",
+      plugins: ["AMap.Geocoder", "AMap.Driving"],
+    });
+    amapApi = AMap;
+    geocoder = new AMap.Geocoder();
+    return amapApi;
+  } catch {
+    ElMessage.error("地图加载失败，请检查高德 Key 与安全密钥配置");
+    return null;
+  }
 };
 
 const getWarehouseLocation = (warehouseId: number) => {
@@ -400,8 +431,8 @@ const buildTrackingLocations = (shipment: Shipment) => {
   pushLocation(fromLocation);
   (shipment.tracking ?? []).forEach((t) => {
     if (!t.location) return;
-    const loc =
-      t.location === "Warehouse" && fromLocation ? fromLocation : t.location;
+    const loc = t.location === "Warehouse" ? fromLocation || "" : t.location;
+    if (!loc) return;
     pushLocation(loc);
   });
   pushLocation(toLocation);
@@ -414,18 +445,51 @@ const trackingDisplay = computed(() =>
 
 const initMap = async () => {
   if (!mapContainer.value) return;
-  const AMap = await AMapLoader.load({
-    key: "bff42bf37382382b61e29c13b4964ad4",
-    version: "2.0",
-    plugins: ["AMap.Geocoder"],
-  });
+  const AMap = await ensureAmapApi();
+  if (!AMap) return;
 
   map = new AMap.Map(mapContainer.value, {
     viewMode: "3D",
     zoom: 5,
     center: [104.195397, 35.86166],
     mapStyle: "amap://styles/dark",
+    resizeEnable: true,
   });
+  driving = new AMap.Driving({
+    map,
+    showTraffic: true,
+    hideMarkers: true,
+  });
+};
+
+const parseLocationToPoint = (loc: string) => {
+  const match = loc.match(/(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)/);
+  if (!match) return null;
+  const lng = Number(match[1]);
+  const lat = Number(match[2]);
+  if (Number.isNaN(lng) || Number.isNaN(lat)) return null;
+  return [lng, lat];
+};
+
+const toLngLat = (AMap: any, point: any) => {
+  if (Array.isArray(point)) return new AMap.LngLat(point[0], point[1]);
+  return point;
+};
+
+const formatDistanceMeters = (meters: number) => {
+  if (!Number.isFinite(meters)) return "-";
+  if (meters < 1000) return `${Math.round(meters)} m`;
+  return `${(meters / 1000).toFixed(1)} km`;
+};
+
+const formatDurationSeconds = (seconds: number) => {
+  if (!Number.isFinite(seconds)) return "-";
+  const s = Math.max(0, Math.round(seconds));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (h > 0 && m > 0) return `${h} 小时 ${m} 分钟`;
+  if (h > 0) return `${h} 小时`;
+  return `${m} 分钟`;
 };
 
 const renderShipmentOnMap = async () => {
@@ -436,10 +500,14 @@ const renderShipmentOnMap = async () => {
   }
   if (!map) return;
   if (warehouses.value.length === 0) await loadWarehouses();
+  map.resize();
   map.clearMap();
+  if (driving?.clear) driving.clear();
+  drivingSummary.value = null;
 
-  const AMap = (window as any).AMap;
-  const geocoder = new AMap.Geocoder();
+  const AMap = amapApi || (await ensureAmapApi());
+  if (!AMap) return;
+  const localGeocoder = geocoder || new AMap.Geocoder();
 
   const locations = buildTrackingLocations(selectedShipment.value);
   if (locations.length === 0) {
@@ -447,10 +515,18 @@ const renderShipmentOnMap = async () => {
     return;
   }
 
+  const drivingNodes: any[] = [];
   const points: any[] = [];
   for (const loc of locations) {
+    const direct = parseLocationToPoint(loc);
+    if (direct) {
+      drivingNodes.push(toLngLat(AMap, direct));
+      points.push(direct);
+      continue;
+    }
+    drivingNodes.push({ keyword: loc });
     const p = await new Promise<any | null>((resolve) => {
-      geocoder.getLocation(loc, (status: string, result: any) => {
+      localGeocoder.getLocation(loc, (status: string, result: any) => {
         if (status === "complete" && result?.geocodes?.[0]?.location)
           resolve(result.geocodes[0].location);
         else resolve(null);
@@ -459,33 +535,68 @@ const renderShipmentOnMap = async () => {
     if (p) points.push(p);
   }
 
-  if (points.length === 0) {
-    ElMessage.warning("无法将轨迹地点解析为坐标，请检查地点文本");
+  if (drivingNodes.length < 2) {
+    ElMessage.warning("轨迹地点不足，无法进行驾车规划");
     return;
   }
 
-  const polyline = new AMap.Polyline({
-    path: points,
-    strokeColor: "#3b82f6",
-    strokeOpacity: 1,
-    strokeWeight: 6,
-    lineJoin: "round",
-    lineCap: "round",
-  });
-  map.add(polyline);
-
-  points.forEach((p, idx) => {
-    new AMap.Marker({
-      position: p,
-      map,
-      title:
-        idx === 0
-          ? "起点"
-          : idx === points.length - 1
-          ? "终点"
-          : `节点${idx + 1}`,
+  let drivingOk = false;
+  if (driving) {
+    await new Promise<void>((resolve) => {
+      driving.search(drivingNodes, (status: string, result: any) => {
+        if (status === "complete" && result?.routes?.[0]) {
+          const route = result.routes[0];
+          if (
+            Number.isFinite(route?.distance) &&
+            Number.isFinite(route?.time)
+          ) {
+            drivingSummary.value = {
+              distance: Number(route.distance),
+              time: Number(route.time),
+            };
+          }
+          drivingOk = true;
+        } else {
+          ElMessage.warning("驾车路径规划失败，已回退直线路径");
+        }
+        resolve();
+      });
     });
-  });
+  }
+
+  if (!drivingOk) {
+    if (points.length === 0) {
+      ElMessage.warning("无法将轨迹地点解析为坐标，请检查地点文本");
+      return;
+    }
+    if (points.length >= 2) {
+      const polyline = new AMap.Polyline({
+        path: points,
+        strokeColor: "#3b82f6",
+        strokeOpacity: 1,
+        strokeWeight: 6,
+        lineJoin: "round",
+        lineCap: "round",
+      });
+      map.add(polyline);
+    }
+  }
+
+  if (points.length > 0) {
+    points.forEach((p, idx) => {
+      new AMap.Marker({
+        position: p,
+        map,
+        title:
+          idx === 0
+            ? "起点"
+            : idx === points.length - 1
+            ? "终点"
+            : `节点${idx + 1}`,
+      });
+    });
+  }
+
   map.setFitView();
 };
 
@@ -497,6 +608,7 @@ watch(activeTab, async (tab) => {
   if (tab === "map") {
     await nextTick();
     if (!map) await initMap();
+    if (map) map.resize();
     if (warehouses.value.length === 0) await loadWarehouses();
     if (selectedShipmentId.value) {
       await loadSelectedShipment();
@@ -710,7 +822,11 @@ onMounted(async () => {
           <p v-if="selectedShipment">
             运输任务：#{{ selectedShipment.shipmentId }}
           </p>
-          <p v-else>请选择运输任务</p>
+          <p v-if="selectedShipment && drivingSummary">
+            驾车规划：{{ formatDistanceMeters(drivingSummary.distance) }} ·
+            {{ formatDurationSeconds(drivingSummary.time) }}
+          </p>
+          <p v-if="!selectedShipment">请选择运输任务</p>
           <div v-if="selectedShipment" class="tracking-list">
             <div
               v-for="(t, idx) in trackingDisplay"
