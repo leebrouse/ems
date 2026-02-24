@@ -61,7 +61,12 @@ func (r *userRepository) UpdateUser(ctx context.Context, user *model.User) error
 
 // DeleteUser 删除用户
 func (r *userRepository) DeleteUser(ctx context.Context, id int64) error {
-	return r.db.WithContext(ctx).Delete(&model.User{}, id).Error
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Table("user_roles").Where("user_id = ?", id).Delete(nil).Error; err != nil {
+			return err
+		}
+		return tx.Delete(&model.User{}, id).Error
+	})
 }
 
 // ListUsers 分页查询用户列表

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { Plus, Trash2, Edit } from 'lucide-vue-next'
-import request from '@/api/request'
+import request from '../api/request'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Edit, Plus, Trash2 } from 'lucide-vue-next'
 
 interface User {
   id: number
@@ -21,16 +21,31 @@ const total = ref(0)
 const query = reactive({ page: 1, size: 20 })
 
 const roles = ref<Role[]>([])
+const defaultRoles: Role[] = [
+  { name: 'Admin', description: '系统管理员, 拥有所有权限' },
+  { name: 'WarehouseManager', description: '仓库管理员, 管理物资出入库，查看报表和统计数据' },
+  { name: 'Dispatcher', description: '救援人员, 负责物资调度的申请' }
+]
 const roleNameToLabel: Record<string, string> = {
   Admin: '系统管理员',
   WarehouseManager: '仓库管理员',
-  Dispatcher: '调度员',
+  Dispatcher: '救援人员',
 }
 const getRoleLabel = (role: string) => roleNameToLabel[role] || role
 
 const loadRoles = async () => {
-  const res: any = await request.get('/api/v1/roles')
-  roles.value = res ?? []
+  try {
+    const res: any = await request.get('/api/v1/roles')
+    const list = Array.isArray(res) ? res : []
+    const map = new Map<string, Role>()
+    for (const item of defaultRoles) map.set(item.name, item)
+    for (const item of list) {
+      if (item?.name) map.set(item.name, item)
+    }
+    roles.value = Array.from(map.values())
+  } catch {
+    roles.value = defaultRoles
+  }
 }
 
 const fetchUsers = async () => {
@@ -152,7 +167,7 @@ onMounted(() => {
         :page-size="query.size"
         :current-page="query.page"
         :total="total"
-        @current-change="(p:number) => { query.page = p; fetchUsers() }"
+        @current-change="(p) => { query.page = p; fetchUsers() }"
       />
     </div>
 

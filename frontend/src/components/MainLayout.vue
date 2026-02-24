@@ -1,42 +1,57 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import { 
-  LayoutDashboard, 
-  Package, 
-  Truck, 
-  Users, 
-  Settings, 
+import { computed } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import { useAuthStore } from "../stores/auth";
+import { logout } from "../api/auth";
+import {
+  LayoutDashboard,
+  Package,
+  Truck,
+  Users,
+  Settings,
   LogOut,
   ChevronLeft,
-  ChevronRight
-} from 'lucide-vue-next'
-import { ref } from 'vue'
+  ChevronRight,
+} from "lucide-vue-next";
+import { ref } from "vue";
 
-const authStore = useAuthStore()
-const router = useRouter()
-const route = useRoute()
-const isCollapse = ref(false)
+const authStore = useAuthStore();
+const router = useRouter();
+const route = useRoute();
+const isCollapse = ref(false);
 
 const menuItems = computed(() => {
   const items = [
-    { title: '概览', index: '/dashboard', icon: LayoutDashboard },
-    { title: '仓储管理', index: '/warehouse', icon: Package, roles: ['Admin', 'WarehouseManager'] },
-    { title: '调度管理', index: '/scheduling', icon: Truck, roles: ['Admin', 'Dispatcher'] },
-    { title: '用户管理', index: '/users', icon: Users, roles: ['Admin'] },
-  ]
-  
-  return items.filter(item => {
-    if (!item.roles) return true
-    return item.roles.some(role => authStore.user?.roles.includes(role))
-  })
-})
+    { title: "概览", index: "/dashboard", icon: LayoutDashboard },
+    {
+      title: "仓储管理",
+      index: "/warehouse",
+      icon: Package,
+      roles: ["Admin", "WarehouseManager"],
+    },
+    {
+      title: "调度管理",
+      index: "/scheduling",
+      icon: Truck,
+      roles: ["Admin", "Dispatcher"],
+    },
+    { title: "用户管理", index: "/users", icon: Users, roles: ["Admin"] },
+  ];
 
-const handleLogout = () => {
-  authStore.logout()
-  router.push('/login')
-}
+  return items.filter((item) => {
+    if (!item.roles) return true;
+    return item.roles.some((role) => authStore.user?.roles.includes(role));
+  });
+});
+
+const handleLogout = async () => {
+  try {
+    await logout();
+  } finally {
+    authStore.logout();
+    router.push("/login");
+  }
+};
 </script>
 
 <template>
@@ -46,7 +61,7 @@ const handleLogout = () => {
         <Truck class="logo-icon" />
         <span v-if="!isCollapse" class="logo-text">救援物资管理系统</span>
       </div>
-      
+
       <el-menu
         :default-active="route.path"
         class="el-menu-vertical"
@@ -56,7 +71,11 @@ const handleLogout = () => {
         text-color="#8b949e"
         active-text-color="#58a6ff"
       >
-        <el-menu-item v-for="item in menuItems" :key="item.index" :index="item.index">
+        <el-menu-item
+          v-for="item in menuItems"
+          :key="item.index"
+          :index="item.index"
+        >
           <el-icon><component :is="item.icon" /></el-icon>
           <template #title>{{ item.title }}</template>
         </el-menu-item>
@@ -75,12 +94,14 @@ const handleLogout = () => {
     <el-container>
       <el-header class="header">
         <div class="header-left">
-          <span class="breadcrumb">{{ (route.meta.title as string) || route.name }}</span>
+          <span class="breadcrumb">{{ route.meta?.title || route.name }}</span>
         </div>
         <div class="header-right">
           <el-dropdown>
             <div class="user-profile">
-              <el-avatar :size="32" class="avatar">{{ authStore.user?.username.charAt(0).toUpperCase() }}</el-avatar>
+              <el-avatar :size="32" class="avatar">{{
+                authStore.user?.username.charAt(0).toUpperCase()
+              }}</el-avatar>
               <span class="username">{{ authStore.user?.username }}</span>
             </div>
             <template #dropdown>
@@ -88,7 +109,11 @@ const handleLogout = () => {
                 <el-dropdown-item>
                   <Settings :size="16" class="mr-2" /> 个人信息
                 </el-dropdown-item>
-                <el-dropdown-item divided @click="handleLogout" class="logout-item">
+                <el-dropdown-item
+                  divided
+                  @click="handleLogout"
+                  class="logout-item"
+                >
                   <LogOut :size="16" class="mr-2" /> 退出登录
                 </el-dropdown-item>
               </el-dropdown-menu>

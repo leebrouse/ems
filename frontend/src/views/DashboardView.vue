@@ -8,7 +8,7 @@ import {
   TrendingUp,
   Box
 } from 'lucide-vue-next'
-import request from '@/api/request'
+import request from '../api/request'
 
 type InventoryStat = { itemId: number; name: string; totalQuantity: number }
 type ShipmentStatPoint = { week?: string; periodLabel?: string; count: number }
