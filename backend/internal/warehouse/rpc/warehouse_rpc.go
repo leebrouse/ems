@@ -12,15 +12,18 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// WarehouseRPCServer 提供仓库服务的 gRPC 接口实现
 type WarehouseRPCServer struct {
 	pb.UnimplementedWarehouseServiceServer
 	svc service.WarehouseService
 }
 
+// NewWarehouseRPCServer 创建 WarehouseRPCServer 实例
 func NewWarehouseRPCServer(svc service.WarehouseService) *WarehouseRPCServer {
 	return &WarehouseRPCServer{svc: svc}
 }
 
+// ListItems 分页查询物资列表
 func (s *WarehouseRPCServer) ListItems(ctx context.Context, in *pb.ListItemsRequest) (*pb.ListItemsResponse, error) {
 	items, total, err := s.svc.ListItems(ctx, int(in.Page), int(in.Size), in.Query)
 	if err != nil {
@@ -41,6 +44,7 @@ func (s *WarehouseRPCServer) ListItems(ctx context.Context, in *pb.ListItemsRequ
 	}, nil
 }
 
+// GetItem 获取物资详情
 func (s *WarehouseRPCServer) GetItem(ctx context.Context, in *pb.GetItemRequest) (*pb.ItemResponse, error) {
 	item, err := s.svc.GetItem(ctx, int64(in.ItemId))
 	if err != nil {
@@ -54,6 +58,7 @@ func (s *WarehouseRPCServer) GetItem(ctx context.Context, in *pb.GetItemRequest)
 	}, nil
 }
 
+// CreateItem 创建物资
 func (s *WarehouseRPCServer) CreateItem(ctx context.Context, in *pb.CreateItemRequest) (*pb.ItemResponse, error) {
 	item := &model.Item{
 		Name:        in.Name,
@@ -72,6 +77,7 @@ func (s *WarehouseRPCServer) CreateItem(ctx context.Context, in *pb.CreateItemRe
 	}, nil
 }
 
+// UpdateItem 更新物资
 func (s *WarehouseRPCServer) UpdateItem(ctx context.Context, in *pb.UpdateItemRequest) (*pb.ItemResponse, error) {
 	updated, err := s.svc.UpdateItem(ctx, int64(in.ItemId), in.Name, in.Unit, in.Description)
 	if err != nil {
@@ -85,7 +91,7 @@ func (s *WarehouseRPCServer) UpdateItem(ctx context.Context, in *pb.UpdateItemRe
 	}, nil
 }
 
-// 
+// DeleteItem 删除物资
 func (s *WarehouseRPCServer) DeleteItem(ctx context.Context, in *pb.DeleteItemRequest) (*empty.Empty, error) {
 	err := s.svc.DeleteItem(ctx, int64(in.ItemId))
 	if err != nil {
@@ -94,7 +100,7 @@ func (s *WarehouseRPCServer) DeleteItem(ctx context.Context, in *pb.DeleteItemRe
 	return &empty.Empty{}, nil
 }
 
-// 
+// ListWarehouses 获取仓库列表
 func (s *WarehouseRPCServer) ListWarehouses(ctx context.Context, in *pb.ListWarehousesRequest) (*pb.ListWarehousesResponse, error) {
 	ws, err := s.svc.ListWarehouses(ctx)
 	if err != nil {
@@ -111,7 +117,7 @@ func (s *WarehouseRPCServer) ListWarehouses(ctx context.Context, in *pb.ListWare
 	return &pb.ListWarehousesResponse{Warehouses: res}, nil
 }
 
-// 
+// GetWarehouse 获取仓库详情
 func (s *WarehouseRPCServer) GetWarehouse(ctx context.Context, in *pb.GetWarehouseRequest) (*pb.WarehouseResponse, error) {
 	w, err := s.svc.GetWarehouse(ctx, int64(in.Id))
 	if err != nil {
@@ -124,6 +130,7 @@ func (s *WarehouseRPCServer) GetWarehouse(ctx context.Context, in *pb.GetWarehou
 	}, nil
 }
 
+// CreateWarehouse 创建仓库
 func (s *WarehouseRPCServer) CreateWarehouse(ctx context.Context, in *pb.CreateWarehouseRequest) (*pb.WarehouseResponse, error) {
 	w, err := s.svc.CreateWarehouse(ctx, in.Name, in.Location)
 	if err != nil {
@@ -136,6 +143,7 @@ func (s *WarehouseRPCServer) CreateWarehouse(ctx context.Context, in *pb.CreateW
 	}, nil
 }
 
+// UpdateWarehouse 更新仓库
 func (s *WarehouseRPCServer) UpdateWarehouse(ctx context.Context, in *pb.UpdateWarehouseRequest) (*pb.WarehouseResponse, error) {
 	w, err := s.svc.UpdateWarehouse(ctx, int64(in.Id), in.Name, in.Location)
 	if err != nil {
@@ -148,6 +156,7 @@ func (s *WarehouseRPCServer) UpdateWarehouse(ctx context.Context, in *pb.UpdateW
 	}, nil
 }
 
+// DeleteWarehouse 删除仓库
 func (s *WarehouseRPCServer) DeleteWarehouse(ctx context.Context, in *pb.DeleteWarehouseRequest) (*empty.Empty, error) {
 	err := s.svc.DeleteWarehouse(ctx, int64(in.Id))
 	if err != nil {
@@ -156,6 +165,7 @@ func (s *WarehouseRPCServer) DeleteWarehouse(ctx context.Context, in *pb.DeleteW
 	return &empty.Empty{}, nil
 }
 
+// AdjustInventory 调整库存
 func (s *WarehouseRPCServer) AdjustInventory(ctx context.Context, in *pb.AdjustInventoryRequest) (*pb.InventoryResponse, error) {
 	// For gRPC AdjustInventory, we assume it might come from other services (like scheduling)
 	// We'll use "gRPC" as reference type for now.

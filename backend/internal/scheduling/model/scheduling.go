@@ -2,21 +2,31 @@ package model
 
 import "time"
 
+// RequestStatus 表示需求单状态
 type RequestStatus string
 
 const (
+	// RequestStatusPending 待分配
 	RequestStatusPending   RequestStatus = "PENDING"
+	// RequestStatusAssigned 已分配
 	RequestStatusAssigned  RequestStatus = "ASSIGNED"
+	// RequestStatusCompleted 已完成
 	RequestStatusCompleted RequestStatus = "COMPLETED"
+	// RequestStatusCancelled 已取消
 	RequestStatusCancelled RequestStatus = "CANCELLED"
 )
 
+// ShipmentStatus 表示运输任务状态
 type ShipmentStatus string
 
 const (
+	// ShipmentStatusNew 新建
 	ShipmentStatusNew       ShipmentStatus = "NEW"
+	// ShipmentStatusInTransit 运输中
 	ShipmentStatusInTransit ShipmentStatus = "IN_TRANSIT"
+	// ShipmentStatusDelivered 已送达
 	ShipmentStatusDelivered ShipmentStatus = "DELIVERED"
+	// ShipmentStatusCancelled 已取消
 	ShipmentStatusCancelled ShipmentStatus = "CANCELLED"
 )
 

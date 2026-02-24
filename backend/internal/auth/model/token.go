@@ -4,6 +4,7 @@ import (
 	"time"
 )
 
+// RefreshToken 表示用户刷新令牌
 type RefreshToken struct {
 	ID        int64     `gorm:"primaryKey;autoIncrement"`
 	UserID    int64     `gorm:"not null;index"`
@@ -13,6 +14,7 @@ type RefreshToken struct {
 	CreatedAt time.Time
 }
 
+// TableName 指定刷新令牌表名
 func (RefreshToken) TableName() string {
 	return "refresh_tokens"
 }

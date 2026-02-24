@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"net"
 	"time"
 
 	"github.com/leebrouse/ems/backend/auth/handler"
@@ -30,21 +29,15 @@ func main() {
 	)
 
 	// 2. Initialize gRPC clients
-	userAddr := viper.GetString("service.user.grpc")
-	if userAddr == "" {
-		userAddr = "localhost:9001"
-	} else if userAddr != "" && userAddr[0] != ':' {
-		// Handle case where it's just a port or an address
-		// viper.GetString might return just "9001" if it's treated as string
+	userHost := viper.GetString("service.user.host")
+	if userHost == "" {
+		userHost = "localhost"
 	}
-
-	// In our config it's "9001", but grpc.Dial needs "host:port"
-	if _, err := net.LookupHost("127.0.0.1"); err == nil {
-		if !contains(userAddr, ":") {
-			userAddr = "localhost:" + userAddr
-		}
+	userPort := viper.GetString("service.user.grpc")
+	if userPort == "" {
+		userPort = "9001"
 	}
-
+	userAddr := userHost + ":" + userPort
 	uConn, err := grpc.NewClient(userAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("did not connect to user service: %v", err)
@@ -66,16 +59,6 @@ func main() {
 
 	// 5. Start Server
 	startRESTServer(h)
-}
-
-// contains 判断字符串是否包含子串
-func contains(s, substr string) bool {
-	for i := 0; i < len(s)-len(substr)+1; i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
 
 // startRESTServer 启动认证 REST API 服务

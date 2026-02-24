@@ -10,10 +10,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// UserHandler 处理用户相关的 HTTP 请求
 type UserHandler struct {
 	svc service.UserService
 }
 
+// NewUserHandler 创建 UserHandler 实例
 func NewUserHandler(svc service.UserService) *UserHandler {
 	return &UserHandler{svc: svc}
 }
@@ -21,6 +23,7 @@ func NewUserHandler(svc service.UserService) *UserHandler {
 // Ensure UserHandler implements user.ServerInterface
 var _ user.ServerInterface = (*UserHandler)(nil)
 
+// ListRoles 获取角色列表
 func (h *UserHandler) ListRoles(c *gin.Context) {
 	roles, err := h.svc.ListRoles(c.Request.Context())
 	if err != nil {
@@ -40,6 +43,7 @@ func (h *UserHandler) ListRoles(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
+// CreateUser 创建用户
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var body user.CreateUserJSONBody
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -65,6 +69,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	c.JSON(http.StatusCreated, h.toUserResponse(u))
 }
 
+// DeleteUser 删除用户
 func (h *UserHandler) DeleteUser(c *gin.Context, id int32) {
 	if err := h.svc.DeleteUser(c.Request.Context(), int64(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -73,6 +78,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context, id int32) {
 	c.Status(http.StatusNoContent)
 }
 
+// GetUser 获取用户详情
 func (h *UserHandler) GetUser(c *gin.Context, id int32) {
 	u, err := h.svc.GetUser(c.Request.Context(), int64(id))
 	if err != nil {
@@ -82,6 +88,7 @@ func (h *UserHandler) GetUser(c *gin.Context, id int32) {
 	c.JSON(http.StatusOK, h.toUserResponse(u))
 }
 
+// ListUsers 分页查询用户列表
 func (h *UserHandler) ListUsers(c *gin.Context, params user.ListUsersParams) {
 	page := 1
 	if params.Page != nil {
@@ -111,6 +118,7 @@ func (h *UserHandler) ListUsers(c *gin.Context, params user.ListUsersParams) {
 	})
 }
 
+// UpdateUser 更新用户
 func (h *UserHandler) UpdateUser(c *gin.Context, id int32) {
 	var body user.UpdateUserJSONBody
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -126,6 +134,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context, id int32) {
 	c.JSON(http.StatusOK, h.toUserResponse(u))
 }
 
+// UpdateUserRoles 更新用户角色
 func (h *UserHandler) UpdateUserRoles(c *gin.Context, id int32) {
 	var body user.UpdateUserRolesJSONBody
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -141,6 +150,7 @@ func (h *UserHandler) UpdateUserRoles(c *gin.Context, id int32) {
 	c.JSON(http.StatusOK, h.toUserResponse(u))
 }
 
+// toUserResponse 转换为 REST 响应结构
 func (h *UserHandler) toUserResponse(u *usrModel.User) user.User {
 	id := int32(u.ID)
 	username := u.Username

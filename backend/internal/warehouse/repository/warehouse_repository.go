@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// WarehouseRepository 定义仓库数据访问接口
 type WarehouseRepository interface {
 	// Item operations
 	CreateItem(ctx context.Context, item *model.Item) error
@@ -39,18 +40,22 @@ type WarehouseRepository interface {
 	WithTransaction(ctx context.Context, fn func(tx *gorm.DB) error) error
 }
 
+// warehouseRepository 使用 GORM 实现 WarehouseRepository
 type warehouseRepository struct {
 	db *gorm.DB
 }
 
+// NewWarehouseRepository 创建 WarehouseRepository 实例
 func NewWarehouseRepository(db *gorm.DB) WarehouseRepository {
 	return &warehouseRepository{db: db}
 }
 
+// CreateItem 保存物资
 func (r *warehouseRepository) CreateItem(ctx context.Context, item *model.Item) error {
 	return r.db.WithContext(ctx).Create(item).Error
 }
 
+// GetItem 获取物资详情
 func (r *warehouseRepository) GetItem(ctx context.Context, id int64) (*model.Item, error) {
 	var item model.Item
 	if err := r.db.WithContext(ctx).First(&item, id).Error; err != nil {
@@ -59,14 +64,17 @@ func (r *warehouseRepository) GetItem(ctx context.Context, id int64) (*model.Ite
 	return &item, nil
 }
 
+// UpdateItem 更新物资
 func (r *warehouseRepository) UpdateItem(ctx context.Context, item *model.Item) error {
 	return r.db.WithContext(ctx).Save(item).Error
 }
 
+// DeleteItem 删除物资
 func (r *warehouseRepository) DeleteItem(ctx context.Context, id int64) error {
 	return r.db.WithContext(ctx).Delete(&model.Item{}, id).Error
 }
 
+// ListItems 分页查询物资列表
 func (r *warehouseRepository) ListItems(ctx context.Context, page, size int, query string) ([]model.Item, int64, error) {
 	var items []model.Item
 	var total int64
@@ -83,10 +91,12 @@ func (r *warehouseRepository) ListItems(ctx context.Context, page, size int, que
 	return items, total, nil
 }
 
+// CreateWarehouse 保存仓库
 func (r *warehouseRepository) CreateWarehouse(ctx context.Context, warehouse *model.Warehouse) error {
 	return r.db.WithContext(ctx).Create(warehouse).Error
 }
 
+// GetWarehouse 获取仓库详情
 func (r *warehouseRepository) GetWarehouse(ctx context.Context, id int64) (*model.Warehouse, error) {
 	var warehouse model.Warehouse
 	if err := r.db.WithContext(ctx).First(&warehouse, id).Error; err != nil {
@@ -95,14 +105,17 @@ func (r *warehouseRepository) GetWarehouse(ctx context.Context, id int64) (*mode
 	return &warehouse, nil
 }
 
+// UpdateWarehouse 更新仓库
 func (r *warehouseRepository) UpdateWarehouse(ctx context.Context, warehouse *model.Warehouse) error {
 	return r.db.WithContext(ctx).Save(warehouse).Error
 }
 
+// DeleteWarehouse 删除仓库
 func (r *warehouseRepository) DeleteWarehouse(ctx context.Context, id int64) error {
 	return r.db.WithContext(ctx).Delete(&model.Warehouse{}, id).Error
 }
 
+// ListWarehouses 获取仓库列表
 func (r *warehouseRepository) ListWarehouses(ctx context.Context) ([]model.Warehouse, error) {
 	var warehouses []model.Warehouse
 	if err := r.db.WithContext(ctx).Find(&warehouses).Error; err != nil {
@@ -111,6 +124,7 @@ func (r *warehouseRepository) ListWarehouses(ctx context.Context) ([]model.Wareh
 	return warehouses, nil
 }
 
+// GetInventory 获取仓库库存
 func (r *warehouseRepository) GetInventory(ctx context.Context, warehouseID int64) ([]model.Inventory, error) {
 	var inventory []model.Inventory
 	if err := r.db.WithContext(ctx).Preload("Item").Where("warehouse_id = ?", warehouseID).Find(&inventory).Error; err != nil {
@@ -119,6 +133,7 @@ func (r *warehouseRepository) GetInventory(ctx context.Context, warehouseID int6
 	return inventory, nil
 }
 
+// GetInventoryByItem 获取指定物资库存
 func (r *warehouseRepository) GetInventoryByItem(ctx context.Context, warehouseID, itemID int64) (*model.Inventory, error) {
 	var inventory model.Inventory
 	err := r.db.WithContext(ctx).Where("warehouse_id = ? AND item_id = ?", warehouseID, itemID).First(&inventory).Error
@@ -131,6 +146,7 @@ func (r *warehouseRepository) GetInventoryByItem(ctx context.Context, warehouseI
 	return &inventory, nil
 }
 
+// UpdateInventory 更新库存并使用乐观锁控制
 func (r *warehouseRepository) UpdateInventory(ctx context.Context, tx *gorm.DB, inventory *model.Inventory) error {
 	db := tx
 	if db == nil {
@@ -147,6 +163,7 @@ func (r *warehouseRepository) UpdateInventory(ctx context.Context, tx *gorm.DB, 
 	return nil
 }
 
+// SetThreshold 设置库存预警阈值
 func (r *warehouseRepository) SetThreshold(ctx context.Context, itemID int64, threshold int) error {
 	var t model.ItemThreshold
 	result := r.db.WithContext(ctx).Where("item_id = ?", itemID).First(&t)
@@ -160,6 +177,7 @@ func (r *warehouseRepository) SetThreshold(ctx context.Context, itemID int64, th
 	return r.db.WithContext(ctx).Save(&t).Error
 }
 
+// ListAlerts 获取库存预警列表
 func (r *warehouseRepository) ListAlerts(ctx context.Context) ([]model.ItemThreshold, error) {
 	var alerts []model.ItemThreshold
 	// Join inventory and item_thresholds to find where quantity < threshold
@@ -172,6 +190,7 @@ func (r *warehouseRepository) ListAlerts(ctx context.Context) ([]model.ItemThres
 	return alerts, err
 }
 
+// CreateInventoryLog 创建库存变更日志
 func (r *warehouseRepository) CreateInventoryLog(ctx context.Context, tx *gorm.DB, log *model.InventoryLog) error {
 	db := tx
 	if db == nil {
@@ -180,7 +199,7 @@ func (r *warehouseRepository) CreateInventoryLog(ctx context.Context, tx *gorm.D
 	return db.WithContext(ctx).Create(log).Error
 }
 
-// WithTransaction is a helper function to create a transaction
+// WithTransaction 在事务中执行回调
 func (r *warehouseRepository) WithTransaction(ctx context.Context, fn func(tx *gorm.DB) error) error {
 	return r.db.WithContext(ctx).Transaction(fn)
 }

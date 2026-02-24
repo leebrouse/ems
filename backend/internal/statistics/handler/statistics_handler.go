@@ -9,10 +9,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// StatisticsHandler 处理统计相关的 HTTP 请求
 type StatisticsHandler struct {
 	svc service.StatisticsService
 }
 
+// NewStatisticsHandler 创建 StatisticsHandler 实例
 func NewStatisticsHandler(svc service.StatisticsService) *StatisticsHandler {
 	return &StatisticsHandler{svc: svc}
 }
@@ -20,6 +22,7 @@ func NewStatisticsHandler(svc service.StatisticsService) *StatisticsHandler {
 // Ensure StatisticsHandler implements statistics.ServerInterface
 var _ statistics.ServerInterface = (*StatisticsHandler)(nil)
 
+// GetInventoryStats 获取库存统计
 func (h *StatisticsHandler) GetInventoryStats(c *gin.Context) {
 	stats, err := h.svc.GetInventoryStats(c.Request.Context())
 	if err != nil {
@@ -29,6 +32,7 @@ func (h *StatisticsHandler) GetInventoryStats(c *gin.Context) {
 	c.JSON(http.StatusOK, stats)
 }
 
+// GetRequestStats 获取需求统计
 func (h *StatisticsHandler) GetRequestStats(c *gin.Context, params statistics.GetRequestStatsParams) {
 	start := ""
 	if params.StartDate != nil {
@@ -47,6 +51,7 @@ func (h *StatisticsHandler) GetRequestStats(c *gin.Context, params statistics.Ge
 	c.JSON(http.StatusOK, stats)
 }
 
+// GetShipmentStats 获取运输统计
 func (h *StatisticsHandler) GetShipmentStats(c *gin.Context, params statistics.GetShipmentStatsParams) {
 	period := "weekly"
 	if params.Period != nil {

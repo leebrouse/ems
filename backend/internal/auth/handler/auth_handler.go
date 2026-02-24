@@ -4,22 +4,21 @@ import (
 	"net/http"
 
 	"github.com/leebrouse/ems/backend/auth/service"
-	"github.com/leebrouse/ems/backend/common/genopenapi/auth"
 
 	"github.com/gin-gonic/gin"
 )
 
+// AuthHandler 处理认证相关的 HTTP 请求
 type AuthHandler struct {
 	svc service.AuthService
 }
 
+// NewAuthHandler 创建 AuthHandler 实例
 func NewAuthHandler(svc service.AuthService) *AuthHandler {
 	return &AuthHandler{svc: svc}
 }
 
-// Ensure AuthHandler implements auth.ServerInterface
-var _ auth.ServerInterface = (*AuthHandler)(nil)
-
+// Login 处理用户名密码登录并返回访问令牌
 func (h *AuthHandler) Login(c *gin.Context) {
 	var body struct {
 		Username string `json:"username" binding:"required"`
@@ -50,6 +49,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	})
 }
 
+// Logout 注销用户并清理刷新令牌
 func (h *AuthHandler) Logout(c *gin.Context) {
 	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil {

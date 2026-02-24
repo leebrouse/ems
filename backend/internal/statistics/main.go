@@ -23,10 +23,15 @@ import (
 // main 负责初始化统计服务依赖并启动 gRPC/REST 服务
 func main() {
 	// 1. Initialize gRPC clients
-	warehouseAddr := viper.GetString("service.warehouse.grpc")
-	if warehouseAddr == "" {
-		warehouseAddr = "localhost:9002"
+	warehouseHost := viper.GetString("service.warehouse.host")
+	if warehouseHost == "" {
+		warehouseHost = "localhost"
 	}
+	warehousePort := viper.GetString("service.warehouse.grpc")
+	if warehousePort == "" {
+		warehousePort = "9002"
+	}
+	warehouseAddr := warehouseHost + ":" + warehousePort
 	wConn, err := grpc.NewClient(warehouseAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("did not connect to warehouse: %v", err)
@@ -35,10 +40,15 @@ func main() {
 	wClient := warehousepb.NewWarehouseServiceClient(wConn)
 
 	// 连接调度服务 gRPC 作为统计数据来源
-	schedulingAddr := viper.GetString("service.scheduling.grpc")
-	if schedulingAddr == "" {
-		schedulingAddr = "localhost:9003"
+	schedulingHost := viper.GetString("service.scheduling.host")
+	if schedulingHost == "" {
+		schedulingHost = "localhost"
 	}
+	schedulingPort := viper.GetString("service.scheduling.grpc")
+	if schedulingPort == "" {
+		schedulingPort = "9003"
+	}
+	schedulingAddr := schedulingHost + ":" + schedulingPort
 	sConn, err := grpc.NewClient(schedulingAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("did not connect to scheduling: %v", err)

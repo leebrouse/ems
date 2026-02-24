@@ -11,10 +11,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// SchedulingHandler 处理调度相关的 HTTP 请求
 type SchedulingHandler struct {
 	svc service.SchedulingService
 }
 
+// NewSchedulingHandler 创建 SchedulingHandler 实例
 func NewSchedulingHandler(svc service.SchedulingService) *SchedulingHandler {
 	return &SchedulingHandler{svc: svc}
 }
@@ -22,6 +24,7 @@ func NewSchedulingHandler(svc service.SchedulingService) *SchedulingHandler {
 // Ensure SchedulingHandler implements scheduling.ServerInterface
 var _ scheduling.ServerInterface = (*SchedulingHandler)(nil)
 
+// ListRequests 分页查询需求单
 func (h *SchedulingHandler) ListRequests(c *gin.Context, params scheduling.ListRequestsParams) {
 	page := int(1)
 	if params.Page != nil {
@@ -49,6 +52,7 @@ func (h *SchedulingHandler) ListRequests(c *gin.Context, params scheduling.ListR
 	})
 }
 
+// CreateRequest 创建需求单
 func (h *SchedulingHandler) CreateRequest(c *gin.Context) {
 	var body scheduling.CreateRequestJSONBody
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -82,6 +86,7 @@ func (h *SchedulingHandler) CreateRequest(c *gin.Context) {
 	c.JSON(http.StatusCreated, req)
 }
 
+// DeleteRequest 删除需求单
 func (h *SchedulingHandler) DeleteRequest(c *gin.Context, id int32) {
 	err := h.svc.DeleteRequest(c.Request.Context(), int64(id))
 	if err != nil {
@@ -95,6 +100,7 @@ func (h *SchedulingHandler) DeleteRequest(c *gin.Context, id int32) {
 	c.Status(http.StatusNoContent)
 }
 
+// GetRequest 获取需求单详情
 func (h *SchedulingHandler) GetRequest(c *gin.Context, id int32) {
 	req, err := h.svc.GetRequest(c.Request.Context(), int64(id))
 	if err != nil {
@@ -104,6 +110,7 @@ func (h *SchedulingHandler) GetRequest(c *gin.Context, id int32) {
 	c.JSON(http.StatusOK, req)
 }
 
+// UpdateRequest 更新需求单
 func (h *SchedulingHandler) UpdateRequest(c *gin.Context, id int32) {
 	var body scheduling.UpdateRequestJSONBody
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -130,6 +137,7 @@ func (h *SchedulingHandler) UpdateRequest(c *gin.Context, id int32) {
 	c.JSON(http.StatusOK, req)
 }
 
+// ListShipments 分页查询运输任务
 func (h *SchedulingHandler) ListShipments(c *gin.Context, params scheduling.ListShipmentsParams) {
 	page := int(1)
 	if params.Page != nil {
@@ -157,6 +165,7 @@ func (h *SchedulingHandler) ListShipments(c *gin.Context, params scheduling.List
 	})
 }
 
+// CreateShipment 创建运输任务
 func (h *SchedulingHandler) CreateShipment(c *gin.Context) {
 	var body scheduling.CreateShipmentJSONBody
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -188,6 +197,7 @@ func (h *SchedulingHandler) CreateShipment(c *gin.Context) {
 	c.JSON(http.StatusCreated, shipment)
 }
 
+// GetShipment 获取运输任务详情
 func (h *SchedulingHandler) GetShipment(c *gin.Context, shipmentId int32) {
 	log.Printf("GetShipment: %v", shipmentId)
 	shipment, err := h.svc.GetShipment(c.Request.Context(), int64(shipmentId))
@@ -198,6 +208,7 @@ func (h *SchedulingHandler) GetShipment(c *gin.Context, shipmentId int32) {
 	c.JSON(http.StatusOK, shipment)
 }
 
+// UpdateShipmentStatus 更新运输任务状态
 func (h *SchedulingHandler) UpdateShipmentStatus(c *gin.Context, shipmentId int32) {
 	var body scheduling.UpdateShipmentStatusJSONBody
 	if err := c.ShouldBindJSON(&body); err != nil {

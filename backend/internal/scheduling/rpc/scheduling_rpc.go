@@ -13,15 +13,18 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// SchedulingRPCServer 提供调度服务的 gRPC 接口实现
 type SchedulingRPCServer struct {
 	pb.UnimplementedSchedulingServiceServer
 	svc service.SchedulingService
 }
 
+// NewSchedulingRPCServer 创建 SchedulingRPCServer 实例
 func NewSchedulingRPCServer(svc service.SchedulingService) *SchedulingRPCServer {
 	return &SchedulingRPCServer{svc: svc}
 }
 
+// CreateRequest 创建需求单
 func (s *SchedulingRPCServer) CreateRequest(ctx context.Context, in *pb.CreateRequestProto) (*pb.RequestResponse, error) {
 	var items []model.RequestItem
 	for _, item := range in.Items {
@@ -38,6 +41,7 @@ func (s *SchedulingRPCServer) CreateRequest(ctx context.Context, in *pb.CreateRe
 	return s.toRequestResponse(req), nil
 }
 
+// ListRequests 分页查询需求单
 func (s *SchedulingRPCServer) ListRequests(ctx context.Context, in *pb.ListRequestsProto) (*pb.ListRequestsResponse, error) {
 	reqs, total, err := s.svc.ListRequests(ctx, int(in.Page), int(in.Size), in.Status)
 	if err != nil {
@@ -53,6 +57,7 @@ func (s *SchedulingRPCServer) ListRequests(ctx context.Context, in *pb.ListReque
 	}, nil
 }
 
+// GetRequest 获取需求单详情
 func (s *SchedulingRPCServer) GetRequest(ctx context.Context, in *pb.GetRequestProto) (*pb.RequestResponse, error) {
 	req, err := s.svc.GetRequest(ctx, int64(in.Id))
 	if err != nil {
@@ -61,6 +66,7 @@ func (s *SchedulingRPCServer) GetRequest(ctx context.Context, in *pb.GetRequestP
 	return s.toRequestResponse(req), nil
 }
 
+// UpdateRequest 更新需求单状态或负责人
 func (s *SchedulingRPCServer) UpdateRequest(ctx context.Context, in *pb.UpdateRequestProto) (*pb.RequestResponse, error) {
 	var assignedTo *int64
 	if in.AssignedTo != 0 {
@@ -74,6 +80,7 @@ func (s *SchedulingRPCServer) UpdateRequest(ctx context.Context, in *pb.UpdateRe
 	return s.toRequestResponse(req), nil
 }
 
+// DeleteRequest 删除需求单
 func (s *SchedulingRPCServer) DeleteRequest(ctx context.Context, in *pb.DeleteRequestProto) (*empty.Empty, error) {
 	err := s.svc.DeleteRequest(ctx, int64(in.Id))
 	if err != nil {
@@ -82,6 +89,7 @@ func (s *SchedulingRPCServer) DeleteRequest(ctx context.Context, in *pb.DeleteRe
 	return &empty.Empty{}, nil
 }
 
+// CreateShipment 创建运输任务
 func (s *SchedulingRPCServer) CreateShipment(ctx context.Context, in *pb.CreateShipmentProto) (*pb.ShipmentResponse, error) {
 	var items []model.ShipmentItem
 	for _, item := range in.Items {
@@ -97,6 +105,7 @@ func (s *SchedulingRPCServer) CreateShipment(ctx context.Context, in *pb.CreateS
 	return s.toShipmentResponse(shipment), nil
 }
 
+// UpdateShipmentStatus 更新运输状态
 func (s *SchedulingRPCServer) UpdateShipmentStatus(ctx context.Context, in *pb.UpdateShipmentProto) (*pb.ShipmentResponse, error) {
 	shipment, err := s.svc.UpdateShipmentStatus(ctx, int64(in.ShipmentId), model.ShipmentStatus(in.Status), in.Location)
 	if err != nil {
@@ -105,6 +114,7 @@ func (s *SchedulingRPCServer) UpdateShipmentStatus(ctx context.Context, in *pb.U
 	return s.toShipmentResponse(shipment), nil
 }
 
+// ListShipments 分页查询运输任务
 func (s *SchedulingRPCServer) ListShipments(ctx context.Context, in *pb.ListShipmentsProto) (*pb.ListShipmentsResponse, error) {
 	shipments, total, err := s.svc.ListShipments(ctx, int(in.Page), int(in.Size), in.Status)
 	if err != nil {
@@ -122,6 +132,7 @@ func (s *SchedulingRPCServer) ListShipments(ctx context.Context, in *pb.ListShip
 	}, nil
 }
 
+// GetShipment 获取运输任务详情
 func (s *SchedulingRPCServer) GetShipment(ctx context.Context, in *pb.GetShipmentProto) (*pb.ShipmentResponse, error) {
 	shipment, err := s.svc.GetShipment(ctx, int64(in.ShipmentId))
 	if err != nil {
@@ -130,6 +141,7 @@ func (s *SchedulingRPCServer) GetShipment(ctx context.Context, in *pb.GetShipmen
 	return s.toShipmentResponse(shipment), nil
 }
 
+// toRequestResponse 转换为 gRPC 响应结构
 func (s *SchedulingRPCServer) toRequestResponse(req *model.Request) *pb.RequestResponse {
 	var items []*pb.ItemQuantity
 	for _, item := range req.Items {
@@ -152,6 +164,7 @@ func (s *SchedulingRPCServer) toRequestResponse(req *model.Request) *pb.RequestR
 	}
 }
 
+// toShipmentResponse 转换为 gRPC 响应结构
 func (s *SchedulingRPCServer) toShipmentResponse(shipment *model.Shipment) *pb.ShipmentResponse {
 	var tracking []*pb.TrackingInfo
 	for _, t := range shipment.Tracking {

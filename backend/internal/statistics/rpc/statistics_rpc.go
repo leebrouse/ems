@@ -11,15 +11,18 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// StatisticsRPCServer 提供统计服务的 gRPC 接口实现
 type StatisticsRPCServer struct {
 	pb.UnimplementedStatisticsServiceServer
 	svc service.StatisticsService
 }
 
+// NewStatisticsRPCServer 创建 StatisticsRPCServer 实例
 func NewStatisticsRPCServer(svc service.StatisticsService) *StatisticsRPCServer {
 	return &StatisticsRPCServer{svc: svc}
 }
 
+// GetInventoryStats 获取库存统计
 func (s *StatisticsRPCServer) GetInventoryStats(ctx context.Context, in *empty.Empty) (*pb.InventoryStatsResponse, error) {
 	items, err := s.svc.GetInventoryStats(ctx)
 	if err != nil {
@@ -36,6 +39,7 @@ func (s *StatisticsRPCServer) GetInventoryStats(ctx context.Context, in *empty.E
 	return &pb.InventoryStatsResponse{Items: res}, nil
 }
 
+// GetRequestStats 获取需求统计
 func (s *StatisticsRPCServer) GetRequestStats(ctx context.Context, in *pb.StatsRequest) (*pb.RequestStatsResponse, error) {
 	stats, err := s.svc.GetRequestStats(ctx, in.StartDate, in.EndDate)
 	if err != nil {
@@ -49,9 +53,8 @@ func (s *StatisticsRPCServer) GetRequestStats(ctx context.Context, in *pb.StatsR
 	}, nil
 }
 
+// GetShipmentStats 获取运输统计
 func (s *StatisticsRPCServer) GetShipmentStats(ctx context.Context, in *pb.StatsRequest) (*pb.ShipmentStatsResponse, error) {
-	// Note: gRPC StatsRequest uses startDate/endDate, but REST uses period.
-	// We'll use startDate as period for now or handle accordingly.
 	stats, err := s.svc.GetShipmentStats(ctx, in.StartDate)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

@@ -1,6 +1,7 @@
 service:
   # 授权认证服务
   auth:
+    host: "auth"
     grpc: "9000"
     rest: "8080"
     postgres:
@@ -13,6 +14,7 @@ service:
 
   # 用户服务
   user:
+    host: "user"
     grpc: "9001"
     rest: "8081"
     postgres:
@@ -25,6 +27,7 @@ service:
 
   # 仓库服务
   warehouse:
+    host: "warehouse"
     grpc: "9002"
     rest: "8082"
     postgres:
@@ -37,6 +40,7 @@ service:
 
   # 调度服务
   scheduling:
+    host: "scheduling"
     grpc: "9003"
     rest: "8083"
     postgres:
@@ -49,6 +53,7 @@ service:
 
   # 统计服务
   statistics:
+    host: "statistics"
     grpc: "9004"
     rest: "8084"
 
