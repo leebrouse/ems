@@ -350,7 +350,7 @@
   ```
 - **权限**：`WarehouseManager`、`Admin`。
 
-- **URL Path**：`POST /api/v1/warehouses/{id}/inventory/remove`
+- **URL Path**：`POST /api/v1/warehouses/{warehouses_id}/inventory/remove`
 - **描述**：出库减少库存（只有在可满足时）。
 - **路径参数**：同上
 - **请求参数**（JSON Body）：

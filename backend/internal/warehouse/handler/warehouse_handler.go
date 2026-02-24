@@ -10,15 +10,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// WarehouseHandler 处理仓库服务的 HTTP 请求
 type WarehouseHandler struct {
 	svc service.WarehouseService
 }
 
-// NewWarehouseHandler creates a new WarehouseHandler
+// NewWarehouseHandler 创建 WarehouseHandler 实例
 func NewWarehouseHandler(svc service.WarehouseService) *WarehouseHandler {
 	return &WarehouseHandler{svc: svc}
 }
 
+// ListAlerts 查询库存预警列表
 func (h *WarehouseHandler) ListAlerts(c *gin.Context) {
 	alerts, err := h.svc.ListAlerts(c.Request.Context())
 	if err != nil {
@@ -28,6 +30,7 @@ func (h *WarehouseHandler) ListAlerts(c *gin.Context) {
 	c.JSON(http.StatusOK, alerts)
 }
 
+// SetThreshold 设置指定物资的库存预警阈值
 func (h *WarehouseHandler) SetThreshold(c *gin.Context) {
 	var body warehouse.SetThresholdJSONBody
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -42,7 +45,7 @@ func (h *WarehouseHandler) SetThreshold(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-// 
+// ListItems 分页查询物资列表
 func (h *WarehouseHandler) ListItems(c *gin.Context, params warehouse.ListItemsParams) {
 	page := int(1)
 	if params.Page != nil {
@@ -70,7 +73,7 @@ func (h *WarehouseHandler) ListItems(c *gin.Context, params warehouse.ListItemsP
 	})
 }
 
-// 
+// CreateItem 新建物资
 func (h *WarehouseHandler) CreateItem(c *gin.Context) {
 	var body warehouse.CreateItemJSONBody
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -94,7 +97,7 @@ func (h *WarehouseHandler) CreateItem(c *gin.Context) {
 	c.JSON(http.StatusCreated, created)
 }
 
-// 
+// DeleteItem 删除物资
 func (h *WarehouseHandler) DeleteItem(c *gin.Context, itemId int32) {
 	err := h.svc.DeleteItem(c.Request.Context(), int64(itemId))
 	if err != nil {
@@ -104,7 +107,7 @@ func (h *WarehouseHandler) DeleteItem(c *gin.Context, itemId int32) {
 	c.Status(http.StatusNoContent)
 }
 
-// 
+// GetItem 查询单个物资详情
 func (h *WarehouseHandler) GetItem(c *gin.Context, itemId int32) {
 	item, err := h.svc.GetItem(c.Request.Context(), int64(itemId))
 	if err != nil {
@@ -114,7 +117,7 @@ func (h *WarehouseHandler) GetItem(c *gin.Context, itemId int32) {
 	c.JSON(http.StatusOK, item)
 }
 
-//
+// UpdateItem 更新物资信息
 func (h *WarehouseHandler) UpdateItem(c *gin.Context, itemId int32) {
 	var body warehouse.UpdateItemJSONBody
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -141,7 +144,7 @@ func (h *WarehouseHandler) UpdateItem(c *gin.Context, itemId int32) {
 	c.JSON(http.StatusOK, updated)
 }
 
-//
+// ListWarehouses 获取仓库列表
 func (h *WarehouseHandler) ListWarehouses(c *gin.Context) {
 	ws, err := h.svc.ListWarehouses(c.Request.Context())
 	if err != nil {
@@ -151,7 +154,7 @@ func (h *WarehouseHandler) ListWarehouses(c *gin.Context) {
 	c.JSON(http.StatusOK, ws)
 }
 
-//
+// CreateWarehouse 新建仓库
 func (h *WarehouseHandler) CreateWarehouse(c *gin.Context) {
 	var body warehouse.CreateWarehouseJSONBody
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -170,6 +173,7 @@ func (h *WarehouseHandler) CreateWarehouse(c *gin.Context) {
 	c.JSON(http.StatusCreated, w)
 }
 
+// DeleteWarehouse 删除仓库
 func (h *WarehouseHandler) DeleteWarehouse(c *gin.Context, id int32) {
 	err := h.svc.DeleteWarehouse(c.Request.Context(), int64(id))
 	if err != nil {
@@ -179,6 +183,7 @@ func (h *WarehouseHandler) DeleteWarehouse(c *gin.Context, id int32) {
 	c.Status(http.StatusNoContent)
 }
 
+// GetWarehouse 获取仓库详情
 func (h *WarehouseHandler) GetWarehouse(c *gin.Context, id int32) {
 	w, err := h.svc.GetWarehouse(c.Request.Context(), int64(id))
 	if err != nil {
@@ -188,6 +193,7 @@ func (h *WarehouseHandler) GetWarehouse(c *gin.Context, id int32) {
 	c.JSON(http.StatusOK, w)
 }
 
+// UpdateWarehouse 更新仓库信息
 func (h *WarehouseHandler) UpdateWarehouse(c *gin.Context, id int32) {
 	var body warehouse.UpdateWarehouseJSONBody
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -210,6 +216,7 @@ func (h *WarehouseHandler) UpdateWarehouse(c *gin.Context, id int32) {
 	c.JSON(http.StatusOK, updated)
 }
 
+// GetInventory 查询仓库库存
 func (h *WarehouseHandler) GetInventory(c *gin.Context, id int32) {
 	inv, err := h.svc.GetInventory(c.Request.Context(), int64(id))
 	if err != nil {
@@ -219,6 +226,7 @@ func (h *WarehouseHandler) GetInventory(c *gin.Context, id int32) {
 	c.JSON(http.StatusOK, inv)
 }
 
+// AddInventory 增加库存
 func (h *WarehouseHandler) AddInventory(c *gin.Context, id int32) {
 	var body warehouse.AddInventoryJSONBody
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -233,6 +241,7 @@ func (h *WarehouseHandler) AddInventory(c *gin.Context, id int32) {
 	c.JSON(http.StatusOK, inv)
 }
 
+// RemoveInventory 扣减库存
 func (h *WarehouseHandler) RemoveInventory(c *gin.Context, id int32) {
 	var body warehouse.RemoveInventoryJSONBody
 	if err := c.ShouldBindJSON(&body); err != nil {

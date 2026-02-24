@@ -20,6 +20,7 @@ import (
 	_ "github.com/leebrouse/ems/backend/common/config"
 )
 
+// main 负责初始化用户服务依赖并启动 gRPC/REST 服务
 func main() {
 	// 1. Initialize Database
 	db := database.Connect("service.user.postgres",
@@ -39,6 +40,7 @@ func main() {
 	startRESTServer(h)
 }
 
+// startGRPCServer 启动用户 gRPC 服务
 func startGRPCServer(r *rpc.UserRPCServer) {
 	port := viper.GetString("service.user.grpc")
 	if port == "" {
@@ -56,6 +58,7 @@ func startGRPCServer(r *rpc.UserRPCServer) {
 	}
 }
 
+// startRESTServer 启动用户 REST API 服务
 func startRESTServer(h *handler.UserHandler) {
 	port := viper.GetString("service.user.rest")
 	if port == "" {

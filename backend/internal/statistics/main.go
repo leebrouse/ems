@@ -20,6 +20,7 @@ import (
 	_ "github.com/leebrouse/ems/backend/common/config"
 )
 
+// main 负责初始化统计服务依赖并启动 gRPC/REST 服务
 func main() {
 	// 1. Initialize gRPC clients
 	warehouseAddr := viper.GetString("service.warehouse.grpc")
@@ -33,7 +34,7 @@ func main() {
 	defer wConn.Close()
 	wClient := warehousepb.NewWarehouseServiceClient(wConn)
 
-	// 
+	// 连接调度服务 gRPC 作为统计数据来源
 	schedulingAddr := viper.GetString("service.scheduling.grpc")
 	if schedulingAddr == "" {
 		schedulingAddr = "localhost:9003"
@@ -56,6 +57,7 @@ func main() {
 	startRESTServer(h)
 }
 
+// startGRPCServer 启动统计 gRPC 服务
 func startGRPCServer(r *rpc.StatisticsRPCServer) {
 	port := viper.GetString("service.statistics.grpc")
 	if port == "" {
@@ -73,6 +75,7 @@ func startGRPCServer(r *rpc.StatisticsRPCServer) {
 	}
 }
 
+// startRESTServer 启动统计 REST API 服务
 func startRESTServer(h *handler.StatisticsHandler) {
 	port := viper.GetString("service.statistics.rest")
 	if port == "" {

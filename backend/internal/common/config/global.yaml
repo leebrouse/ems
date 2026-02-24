@@ -4,46 +4,50 @@ service:
     grpc: "9000"
     rest: "8080"
     postgres:
-      host: "127.0.0.1"
+      host: "postgres"
       port: "5432"
       user: "postgres"
       password: "123456"
       database: "auth"
       sslmode: "disable"
+
   # 用户服务
   user:
     grpc: "9001"
     rest: "8081"
     postgres:
-      host: "127.0.0.1"
+      host: "postgres"
       port: "5432"
       user: "postgres"
       password: "123456"
       database: "user"
       sslmode: "disable"
+
   # 仓库服务
   warehouse:
     grpc: "9002"
     rest: "8082"
     postgres:
-      host: "127.0.0.1"
+      host: "postgres"
       port: "5432"
       user: "postgres"
       password: "123456"
       database: "warehouse"
       sslmode: "disable"
+
   # 调度服务
   scheduling:
     grpc: "9003"
     rest: "8083"
     postgres:
-      host: "127.0.0.1"
+      host: "postgres"
       port: "5432"
       user: "postgres"
       password: "123456"
       database: "scheduling"
       sslmode: "disable"
 
+  # 统计服务
   statistics:
     grpc: "9004"
     rest: "8084"

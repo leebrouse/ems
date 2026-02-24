@@ -64,6 +64,7 @@ func (s *userService) CreateUser(ctx context.Context, username, password string,
 		IsActive:     true,
 	}
 
+	// save into db
 	if err := s.repo.CreateUser(ctx, user); err != nil {
 		return nil, err
 	}

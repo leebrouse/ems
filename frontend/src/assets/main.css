@@ -1,0 +1,66 @@
+:root {
+  --primary-color: #3b82f6;
+  --bg-color: #0f172a;
+  --text-color: #f8fafc;
+  --border-color: #1e293b;
+  --sidebar-bg: #1e293b;
+  --header-bg: #1e293b;
+  --card-bg: #1e293b;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: #0d1117;
+  color: #c9d1d9;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Element Plus Dark Theme Overrides */
+html.dark {
+  --el-bg-color: #0d1117;
+  --el-bg-color-overlay: #161b22;
+  --el-text-color-primary: #c9d1d9;
+  --el-border-color-light: #30363d;
+}
+
+.el-menu {
+  border-right: none !important;
+}
+
+.el-header {
+  border-bottom: 1px solid #30363d;
+}
+
+.el-aside {
+  border-right: 1px solid #30363d;
+  background-color: #0d1117;
+}
+
+.dashboard-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+}

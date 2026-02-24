@@ -22,6 +22,7 @@ import (
 	_ "github.com/leebrouse/ems/backend/common/config"
 )
 
+// main 负责初始化认证服务依赖并启动 REST 服务
 func main() {
 	// 1. Initialize Database
 	db := database.Connect("service.auth.postgres",
@@ -67,6 +68,7 @@ func main() {
 	startRESTServer(h)
 }
 
+// contains 判断字符串是否包含子串
 func contains(s, substr string) bool {
 	for i := 0; i < len(s)-len(substr)+1; i++ {
 		if s[i:i+len(substr)] == substr {
@@ -76,6 +78,7 @@ func contains(s, substr string) bool {
 	return false
 }
 
+// startRESTServer 启动认证 REST API 服务
 func startRESTServer(h *handler.AuthHandler) {
 	port := viper.GetString("service.auth.rest")
 	if port == "" {
