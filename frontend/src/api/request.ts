@@ -34,13 +34,13 @@ request.interceptors.response.use(
                 const authStore = useAuthStore()
                 authStore.logout()
                 router.push('/login')
-                ElMessage.error('Session expired, please login again')
+                ElMessage.error('登录已过期，请重新登录')
             } else {
-                const message = error.response.data?.error || 'System error'
+                const message = error.response.data?.error || '系统错误'
                 ElMessage.error(message)
             }
         } else {
-            ElMessage.error('Network error')
+            ElMessage.error('网络错误')
         }
         return Promise.reject(error)
     }

@@ -9,7 +9,7 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: () => import('../views/LoginView.vue'),
-      meta: { public: true }
+      meta: { public: true, title: '登录' }
     },
     {
       path: '/',
@@ -19,25 +19,26 @@ const router = createRouter({
         {
           path: 'dashboard',
           name: 'Dashboard',
-          component: () => import('../views/DashboardView.vue')
+          component: () => import('../views/DashboardView.vue'),
+          meta: { title: '概览' }
         },
         {
           path: 'warehouse',
           name: 'Warehouse',
           component: () => import('../views/WarehouseView.vue'),
-          meta: { roles: ['Admin', 'WarehouseManager'] }
+          meta: { roles: ['Admin', 'WarehouseManager'], title: '仓储管理' }
         },
         {
           path: 'scheduling',
           name: 'Scheduling',
           component: () => import('../views/SchedulingView.vue'),
-          meta: { roles: ['Admin', 'Dispatcher'] }
+          meta: { roles: ['Admin', 'Dispatcher'], title: '调度管理' }
         },
         {
           path: 'users',
           name: 'Users',
           component: () => import('../views/UsersView.vue'),
-          meta: { roles: ['Admin'] }
+          meta: { roles: ['Admin'], title: '用户管理' }
         }
       ]
     }

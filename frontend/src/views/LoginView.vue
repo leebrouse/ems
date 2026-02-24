@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { login } from '@/api/auth'
 import { ElMessage } from 'element-plus'
-import { Truck, Lock, User as UserIcon, Loader2 } from 'lucide-vue-next'
+import { Truck, Lock, User as UserIcon } from 'lucide-vue-next'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -17,7 +17,7 @@ const loginForm = reactive({
 
 const handleLogin = async () => {
   if (!loginForm.username || !loginForm.password) {
-    ElMessage.warning('Please enter username and password')
+    ElMessage.warning('请输入用户名和密码')
     return
   }
   
@@ -25,7 +25,7 @@ const handleLogin = async () => {
   try {
     const res: any = await login(loginForm)
     authStore.setAuth(res.token, res.user)
-    ElMessage.success('Login successful')
+    ElMessage.success('登录成功')
     router.push('/dashboard')
   } catch (err) {
     // Error handled by interceptor
@@ -44,15 +44,15 @@ const handleLogin = async () => {
         <div class="logo-circle">
           <Truck class="logo-icon" />
         </div>
-        <h1>Rescue EMS</h1>
-        <p>Emergency Management System</p>
+        <h1>救援物资管理系统</h1>
+        <p>应急救援物资管理平台</p>
       </div>
 
       <el-form :model="loginForm" class="login-form">
         <el-form-item>
           <el-input
             v-model="loginForm.username"
-            placeholder="Username"
+            placeholder="用户名"
             :prefix-icon="UserIcon"
             size="large"
             @keyup.enter="handleLogin"
@@ -62,7 +62,7 @@ const handleLogin = async () => {
           <el-input
             v-model="loginForm.password"
             type="password"
-            placeholder="Password"
+            placeholder="密码"
             :prefix-icon="Lock"
             size="large"
             show-password
@@ -77,12 +77,12 @@ const handleLogin = async () => {
           size="large"
           @click="handleLogin"
         >
-          {{ loading ? 'Authenticating...' : 'Sign In' }}
+          {{ loading ? '正在验证...' : '登录' }}
         </el-button>
       </el-form>
 
       <div class="login-footer">
-        <span>Forgot password? Contact Administrator</span>
+        <span>忘记密码？请联系管理员</span>
       </div>
     </div>
   </div>

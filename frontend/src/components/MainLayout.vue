@@ -9,7 +9,6 @@ import {
   Users, 
   Settings, 
   LogOut,
-  Menu as MenuIcon,
   ChevronLeft,
   ChevronRight
 } from 'lucide-vue-next'
@@ -22,10 +21,10 @@ const isCollapse = ref(false)
 
 const menuItems = computed(() => {
   const items = [
-    { title: 'Dashboard', index: '/dashboard', icon: LayoutDashboard },
-    { title: 'Warehouse', index: '/warehouse', icon: Package, roles: ['Admin', 'WarehouseManager'] },
-    { title: 'Scheduling', index: '/scheduling', icon: Truck, roles: ['Admin', 'Dispatcher'] },
-    { title: 'Users', index: '/users', icon: Users, roles: ['Admin'] },
+    { title: '概览', index: '/dashboard', icon: LayoutDashboard },
+    { title: '仓储管理', index: '/warehouse', icon: Package, roles: ['Admin', 'WarehouseManager'] },
+    { title: '调度管理', index: '/scheduling', icon: Truck, roles: ['Admin', 'Dispatcher'] },
+    { title: '用户管理', index: '/users', icon: Users, roles: ['Admin'] },
   ]
   
   return items.filter(item => {
@@ -45,7 +44,7 @@ const handleLogout = () => {
     <el-aside :width="isCollapse ? '64px' : '240px'" class="aside">
       <div class="logo-container">
         <Truck class="logo-icon" />
-        <span v-if="!isCollapse" class="logo-text">Rescue EMS</span>
+        <span v-if="!isCollapse" class="logo-text">救援物资管理系统</span>
       </div>
       
       <el-menu
@@ -76,7 +75,7 @@ const handleLogout = () => {
     <el-container>
       <el-header class="header">
         <div class="header-left">
-          <span class="breadcrumb">{{ route.name }}</span>
+          <span class="breadcrumb">{{ (route.meta.title as string) || route.name }}</span>
         </div>
         <div class="header-right">
           <el-dropdown>
@@ -87,10 +86,10 @@ const handleLogout = () => {
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item>
-                  <Settings :size="16" class="mr-2" /> Profile
+                  <Settings :size="16" class="mr-2" /> 个人信息
                 </el-dropdown-item>
                 <el-dropdown-item divided @click="handleLogout" class="logout-item">
-                  <LogOut :size="16" class="mr-2" /> Logout
+                  <LogOut :size="16" class="mr-2" /> 退出登录
                 </el-dropdown-item>
               </el-dropdown-menu>
             </template>
