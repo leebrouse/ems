@@ -1,4 +1,9 @@
 <script setup lang="ts">
+/**
+ * 登录页：
+ * - 调用 /api/v1/auth/login 获取 token + user
+ * - 写入 Pinia + LocalStorage，并跳转到概览页
+ */
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -16,6 +21,7 @@ const loginForm = reactive({
 })
 
 const handleLogin = async () => {
+  // 基础校验：避免空提交
   if (!loginForm.username || !loginForm.password) {
     ElMessage.warning('请输入用户名和密码')
     return
@@ -24,6 +30,7 @@ const handleLogin = async () => {
   loading.value = true
   try {
     const res: any = await login(loginForm)
+    // 登录成功：保存 token 与用户信息
     authStore.setAuth(res.token, res.user)
     ElMessage.success('登录成功')
     router.push('/dashboard')

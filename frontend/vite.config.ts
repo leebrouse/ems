@@ -16,6 +16,10 @@ export default defineConfig({
     },
   },
   server: {
+    /**
+     * 开发环境接口代理：
+     * 前端统一请求 /api/v1/**，由 dev server 转发到本机各后端服务端口。
+     */
     proxy: {
       '/api/v1/auth': { target: 'http://localhost:8080', changeOrigin: true },
       '/api/v1/users': { target: 'http://localhost:8081', changeOrigin: true },

@@ -3,12 +3,18 @@ import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
 
+/**
+ * axios 实例封装：
+ * - baseURL 使用 '/'：开发环境由 Vite proxy 转发到后端各服务
+ * - 请求拦截：自动附带 JWT Bearer Token
+ * - 响应拦截：统一提取 data、处理 401 过期与错误提示
+ */
 const request = axios.create({
     baseURL: '/',
     timeout: 10000
 })
 
-// Request Interceptor
+// 请求拦截：注入 Authorization 头
 request.interceptors.request.use(
     (config) => {
         const authStore = useAuthStore()
@@ -22,7 +28,7 @@ request.interceptors.request.use(
     }
 )
 
-// Response Interceptor
+// 响应拦截：统一返回 data；错误时做全局提示与登录态处理
 request.interceptors.response.use(
     (response) => {
         return response.data
@@ -31,6 +37,7 @@ request.interceptors.response.use(
         if (error.response) {
             const { status } = error.response
             if (status === 401) {
+                // 认证过期/无效：清理登录态并回到登录页
                 const authStore = useAuthStore()
                 authStore.logout()
                 router.push('/login')

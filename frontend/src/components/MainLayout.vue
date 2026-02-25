@@ -1,4 +1,10 @@
 <script setup lang="ts">
+/**
+ * 主布局：
+ * - 左侧菜单：根据用户角色过滤可见菜单
+ * - 顶部栏：显示当前页面标题与用户信息
+ * - 退出登录：调用后端接口 + 清理本地登录态
+ */
 import { computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "../stores/auth";
@@ -21,6 +27,7 @@ const route = useRoute();
 const isCollapse = ref(false);
 
 const menuItems = computed(() => {
+  // 通过 roles 字段做 RBAC 过滤：只展示当前用户允许的菜单项
   const items = [
     { title: "概览", index: "/dashboard", icon: LayoutDashboard },
     {

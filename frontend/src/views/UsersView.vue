@@ -1,4 +1,10 @@
 <script setup lang="ts">
+/**
+ * 用户管理：
+ * - 查询用户列表（分页）
+ * - 创建/编辑/删除用户
+ * - 角色列表优先从后端获取，失败时使用默认角色兜底
+ */
 import { onMounted, reactive, ref } from "vue";
 import request from "../api/request";
 import { ElMessage, ElMessageBox } from "element-plus";

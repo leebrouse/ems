@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/**
+ * 调度管理：
+ * - 需求（Requests）：创建/查询/更新/删除
+ * - 运输任务（Shipments）：创建任务、更新运输状态、查看详情
+ * - 地图追踪（Map）：基于高德地图展示运输路径与节点
+ *
+ * 说明：对后端返回字段做 normalize，兼容不同命名风格。
+ */
 import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
 import { List, Map as MapIcon, Plus, RefreshCw } from "lucide-vue-next";
 import AMapLoader from "@amap/amap-jsapi-loader";
@@ -358,6 +366,7 @@ let amapApi: any = null;
 let geocoder: any = null;
 let driving: any = null;
 const drivingSummary = ref<{ distance: number; time: number } | null>(null);
+// 高德地图 Web 端 key 与安全密钥（前端可见）：如需替换请在此处修改或改为环境变量注入
 const amapKey = "0282382759b77d9371ab6f78e022bfeb";
 const amapSecurityCode = "3512fe5d4078e94b9dca5b2f2f8cb6eb";
 

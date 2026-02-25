@@ -1,4 +1,13 @@
 <script setup lang="ts">
+/**
+ * 仓储管理：
+ * - 物资管理（Items）：增删改查、搜索、分页
+ * - 仓库管理（Warehouses）：仓库列表与基础信息
+ * - 库存（Inventory）：按仓库查看库存明细
+ * - 预警（Alerts）：低于阈值的物资列表
+ *
+ * 说明：页面会对后端返回字段做 normalize，兼容不同命名风格。
+ */
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import request from "../api/request";
 import { ElMessage, ElMessageBox } from "element-plus";
@@ -24,6 +33,7 @@ type AlertRow = {
   threshold: number;
 };
 
+// 兼容后端字段命名差异（例如 id/ID、name/Name）
 const normalizeItem = (raw: any): Item => ({
   id: Number(raw?.id ?? raw?.ID ?? raw?.itemId ?? raw?.ItemID ?? 0),
   name: String(raw?.name ?? raw?.Name ?? ""),
@@ -75,6 +85,7 @@ const selectedWarehouseId = ref<number | null>(null);
 const alertsLoading = ref(false);
 const alertsData = ref<AlertRow[]>([]);
 
+// 物资列表：支持分页与关键字 query
 const loadItems = async () => {
   itemsLoading.value = true;
   try {
@@ -90,6 +101,7 @@ const loadItems = async () => {
   }
 };
 
+// 给弹窗/下拉用：一次性拉取较大的物资列表
 const loadItemsOptions = async () => {
   const res: any = await request.get("/api/v1/items", {
     params: { page: 1, size: 1000 },
@@ -98,6 +110,7 @@ const loadItemsOptions = async () => {
   itemsOptions.value = Array.isArray(list) ? list.map(normalizeItem) : [];
 };
 
+// 仓库列表：用于管理与库存查询
 const loadWarehouses = async () => {
   warehousesLoading.value = true;
   try {
@@ -114,6 +127,7 @@ const loadWarehouses = async () => {
   }
 };
 
+// 库存明细：按仓库查询
 const loadInventory = async () => {
   if (!selectedWarehouseId.value) return;
   inventoryLoading.value = true;
@@ -130,6 +144,7 @@ const loadInventory = async () => {
   }
 };
 
+// 预警列表：低于阈值的物资
 const loadAlerts = async () => {
   alertsLoading.value = true;
   try {

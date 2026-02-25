@@ -1,4 +1,10 @@
 <script setup lang="ts">
+/**
+ * 概览页：
+ * - 聚合展示库存总量、运输中任务、待处理需求、库存预警
+ * - 使用 ECharts 渲染运输趋势与库存 Top 分布
+ * - 兼容后端返回字段大小写差异（normalize*）
+ */
 import { ref, onMounted } from "vue";
 import * as echarts from "echarts";
 import {
@@ -15,6 +21,7 @@ type ShipmentStatPoint = { week?: string; periodLabel?: string; count: number };
 type Warehouse = { id: number; name: string; location?: string };
 type InventoryRow = { itemId: number; name: string; quantity: number };
 
+// 兼容后端字段命名差异（例如 id/ID、name/Name）
 const normalizeWarehouse = (raw: any): Warehouse => ({
   id: Number(raw?.id ?? raw?.ID ?? 0),
   name: String(raw?.name ?? raw?.Name ?? ""),
@@ -52,6 +59,7 @@ const stats = ref({
 const barChartRef = ref<HTMLElement | null>(null);
 const pieChartRef = ref<HTMLElement | null>(null);
 
+// 根据接口数据初始化/更新图表
 const initCharts = (
   shipmentSeries?: { labels: string[]; counts: number[] },
   inventorySeries?: { labels: string[]; values: number[] }
