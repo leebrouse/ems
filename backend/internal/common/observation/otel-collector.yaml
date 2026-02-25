@@ -1,11 +1,21 @@
+# 1. Extensions：绑定 Collector 内部可选监控/诊断端点
+extensions:
+  health_check: {}           # 健康检查扩展，暴露端口 13133 用于 readiness/liveness 探针（集成 Compose 中的端口）
+  pprof:                     # pprof 性能剖析扩展
+    # Collector 内部 pprof 端点
+    # Compose 映射 1888:1888
+    endpoint: "0.0.0.0:1888"
+
+# 2. Receivers：接收来自应用/agent 的 OTLP 数据（Trace + Metrics）
 receivers:
   otlp:
     protocols:
       grpc:
-        endpoint: 0.0.0.0:4317
+        endpoint: "0.0.0.0:4317"   # OTLP gRPC 接收器，对应 Compose 映射 "14317:4317"（宿主机 14317 映射到容器 4317）
       http:
-        endpoint: 0.0.0.0:4318
+        endpoint: "0.0.0.0:4318"   # OTLP HTTP 接收器，对应 Compose 映射 "14318:4318"
 
+# 3. Processors：在导出前对数据进行处理（批处理/内存控制）
 processors:
   memory_limiter:
     check_interval: 1s
@@ -17,9 +27,12 @@ processors:
     send_batch_max_size: 16384
     timeout: 2s
 
+# 4. Exporters：将收集到的数据发送到后端或暴露给 Prometheus
 exporters:
+  # 4.1 Jaeger OTLP Exporter
   otlp/jaeger:
-    endpoint: jaeger:4317
+    # 指向 jaeger：4317 是 upstream Jaeger 服务启用了 OTLP gRPC（jaeger-all-in-one + COLLECTOR_OTLP_ENABLED）
+    endpoint: "jaeger:4317"
     tls:
       insecure: true
     sending_queue:
@@ -32,24 +45,30 @@ exporters:
       max_interval: 30s
       max_elapsed_time: 5m
 
+  # 4.2 Prometheus exporter
   prometheus:
-    endpoint: 0.0.0.0:9464
+    # Collector 内部监听接口，Compose 映射 "9464:9464"
+    endpoint: "0.0.0.0:9464"
     namespace: ems
     send_timestamps: true
     enable_open_metrics: true
     resource_to_telemetry_conversion:
       enabled: true
 
+# 5. Service Pipeline：定义 trace/metrics 如何通过 recv→proc→export 流转
 service:
+  extensions: [health_check, pprof]
   telemetry:
     logs:
       level: info
+
   pipelines:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [otlp/jaeger]
+      exporters: [otlp/jaeger]        # 将 trace 导出到 Jaeger
+
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [prometheus]
+      exporters: [prometheus]         # 将 metrics 暴露给 Prometheus 抓取

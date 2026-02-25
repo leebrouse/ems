@@ -25,6 +25,7 @@ type JWTHandler struct {
 	tokenDuration time.Duration
 }
 
+// NewJWTHandler 创建一个新的 JWT 处理程序
 func NewJWTHandler(secretKey string, issuer string, duration time.Duration) *JWTHandler {
 	return &JWTHandler{
 		secretKey:     []byte(secretKey),
@@ -33,6 +34,7 @@ func NewJWTHandler(secretKey string, issuer string, duration time.Duration) *JWT
 	}
 }
 
+// GenerateToken 生成 JWT 令牌
 func (h *JWTHandler) GenerateToken(userID int64, username string, roles []string) (string, error) {
 	claims := Claims{
 		UserID:   userID,
@@ -50,6 +52,7 @@ func (h *JWTHandler) GenerateToken(userID int64, username string, roles []string
 	return token.SignedString(h.secretKey)
 }
 
+// ValidateToken 验证 JWT 令牌
 func (h *JWTHandler) ValidateToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
