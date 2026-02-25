@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"time"
 
@@ -12,17 +13,23 @@ import (
 	"github.com/leebrouse/ems/backend/common/database"
 	"github.com/leebrouse/ems/backend/common/genopenapi/auth"
 	userpb "github.com/leebrouse/ems/backend/common/genproto/user/grpc"
+	"github.com/leebrouse/ems/backend/common/observation"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
 	_ "github.com/leebrouse/ems/backend/common/config"
 )
 
 // main 负责初始化认证服务依赖并启动 REST 服务
 func main() {
+	shutdown, err := observation.InitFromViper(context.Background(), "auth")
+	if err != nil {
+		log.Fatalf("failed to init observation: %v", err)
+	}
+	defer func() { _ = shutdown(context.Background()) }()
+
 	// 1. Initialize Database
 	db := database.Connect("service.auth.postgres",
 		&model.RefreshToken{},
@@ -38,7 +45,7 @@ func main() {
 		userPort = "9001"
 	}
 	userAddr := userHost + ":" + userPort
-	uConn, err := grpc.NewClient(userAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	uConn, err := grpc.NewClient(userAddr, observation.GRPCDialOptions()...)
 	if err != nil {
 		log.Fatalf("did not connect to user service: %v", err)
 	}
@@ -70,7 +77,7 @@ func startRESTServer(h *handler.AuthHandler) {
 
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
-	router.Use(gin.Logger(), gin.Recovery())
+	router.Use(gin.Logger(), gin.Recovery(), observation.GinMiddleware("auth"))
 	auth.RegisterHandlers(router, h)
 
 	log.Printf("Auth REST server listening at :%s", port)

@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net"
 
 	"github.com/leebrouse/ems/backend/common/database"
 	"github.com/leebrouse/ems/backend/common/genopenapi/warehouse"
 	pb "github.com/leebrouse/ems/backend/common/genproto/warehouse/grpc"
+	"github.com/leebrouse/ems/backend/common/observation"
 	"github.com/leebrouse/ems/backend/warehouse/handler"
 	"github.com/leebrouse/ems/backend/warehouse/model"
 	"github.com/leebrouse/ems/backend/warehouse/repository"
@@ -22,6 +24,13 @@ import (
 
 // main 负责初始化仓库服务依赖并启动 gRPC/REST 服务
 func main() {
+	// 
+	shutdown, err := observation.InitFromViper(context.Background(), "warehouse")
+	if err != nil {
+		log.Fatalf("failed to init observation: %v", err)
+	}
+	defer func() { _ = shutdown(context.Background()) }()
+
 	// 1. Initialize Database
 	db := database.Connect("service.warehouse.postgres",
 		&model.Item{},
@@ -55,7 +64,7 @@ func startGRPCServer(r *rpc.WarehouseRPCServer) {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	s := grpc.NewServer()
+	s := grpc.NewServer(observation.GRPCServerOptions()...)
 	pb.RegisterWarehouseServiceServer(s, r)
 	// 注册 gRPC 服务实现
 	log.Printf("gRPC server listening at %v", lis.Addr())
@@ -73,7 +82,7 @@ func startRESTServer(h *handler.WarehouseHandler) {
 
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
-	router.Use(gin.Logger(), gin.Recovery())
+	router.Use(gin.Logger(), gin.Recovery(), observation.GinMiddleware("warehouse"))
 	warehouse.RegisterHandlers(router, h)
 
 	log.Printf("REST server listening at :%s", port)

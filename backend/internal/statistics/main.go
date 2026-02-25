@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net"
 
@@ -8,6 +9,7 @@ import (
 	schedulingpb "github.com/leebrouse/ems/backend/common/genproto/scheduling/grpc"
 	pb "github.com/leebrouse/ems/backend/common/genproto/statistics/grpc"
 	warehousepb "github.com/leebrouse/ems/backend/common/genproto/warehouse/grpc"
+	"github.com/leebrouse/ems/backend/common/observation"
 	"github.com/leebrouse/ems/backend/statistics/handler"
 	"github.com/leebrouse/ems/backend/statistics/rpc"
 	"github.com/leebrouse/ems/backend/statistics/service"
@@ -15,13 +17,18 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
 	_ "github.com/leebrouse/ems/backend/common/config"
 )
 
 // main 负责初始化统计服务依赖并启动 gRPC/REST 服务
 func main() {
+	shutdown, err := observation.InitFromViper(context.Background(), "statistics")
+	if err != nil {
+		log.Fatalf("failed to init observation: %v", err)
+	}
+	defer func() { _ = shutdown(context.Background()) }()
+
 	// 1. Initialize gRPC clients
 	warehouseHost := viper.GetString("service.warehouse.host")
 	if warehouseHost == "" {
@@ -32,7 +39,7 @@ func main() {
 		warehousePort = "9002"
 	}
 	warehouseAddr := warehouseHost + ":" + warehousePort
-	wConn, err := grpc.NewClient(warehouseAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	wConn, err := grpc.NewClient(warehouseAddr, observation.GRPCDialOptions()...)
 	if err != nil {
 		log.Fatalf("did not connect to warehouse: %v", err)
 	}
@@ -49,7 +56,7 @@ func main() {
 		schedulingPort = "9003"
 	}
 	schedulingAddr := schedulingHost + ":" + schedulingPort
-	sConn, err := grpc.NewClient(schedulingAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	sConn, err := grpc.NewClient(schedulingAddr, observation.GRPCDialOptions()...)
 	if err != nil {
 		log.Fatalf("did not connect to scheduling: %v", err)
 	}
@@ -77,7 +84,7 @@ func startGRPCServer(r *rpc.StatisticsRPCServer) {
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	s := grpc.NewServer()
+	s := grpc.NewServer(observation.GRPCServerOptions()...)
 	pb.RegisterStatisticsServiceServer(s, r)
 	log.Printf("gRPC server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
@@ -94,7 +101,7 @@ func startRESTServer(h *handler.StatisticsHandler) {
 
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
-	router.Use(gin.Logger(), gin.Recovery())
+	router.Use(gin.Logger(), gin.Recovery(), observation.GinMiddleware("statistics"))
 	statistics.RegisterHandlers(router, h)
 
 	log.Printf("REST server listening at :%s", port)

@@ -61,6 +61,16 @@ security:
   encryption_key: "emergency-system-aes-key-32chars"
 
 observation:
+  enabled: true
+  otlp:
+    endpoint: "otel-collector:4317"
+    protocol: "grpc"
+  sampling:
+    ratio: 0.1
+  resource:
+    namespace: "ems"
+    environment: "dev"
+    version: "dev"
   jaeger:
     url: "http://jaeger:14268/api/traces"
 

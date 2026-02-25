@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net"
 
 	"github.com/leebrouse/ems/backend/common/database"
 	"github.com/leebrouse/ems/backend/common/genopenapi/scheduling"
 	pb "github.com/leebrouse/ems/backend/common/genproto/scheduling/grpc"
+	"github.com/leebrouse/ems/backend/common/observation"
 	"github.com/leebrouse/ems/backend/scheduling/handler"
 	"github.com/leebrouse/ems/backend/scheduling/model"
 	"github.com/leebrouse/ems/backend/scheduling/repository"
@@ -22,6 +24,12 @@ import (
 
 // main 负责初始化调度服务依赖并启动 gRPC/REST 服务
 func main() {
+	shutdown, err := observation.InitFromViper(context.Background(), "scheduling")
+	if err != nil {
+		log.Fatalf("failed to init observation: %v", err)
+	}
+	defer func() { _ = shutdown(context.Background()) }()
+
 	// 1. Initialize Database
 	db := database.Connect("service.scheduling.postgres",
 		&model.Request{},
@@ -53,7 +61,7 @@ func startGRPCServer(r *rpc.SchedulingRPCServer) {
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	s := grpc.NewServer()
+	s := grpc.NewServer(observation.GRPCServerOptions()...)
 	pb.RegisterSchedulingServiceServer(s, r)
 	log.Printf("gRPC server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
@@ -70,7 +78,7 @@ func startRESTServer(h *handler.SchedulingHandler) {
 
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
-	router.Use(gin.Logger(), gin.Recovery())
+	router.Use(gin.Logger(), gin.Recovery(), observation.GinMiddleware("scheduling"))
 	scheduling.RegisterHandlers(router, h)
 
 	log.Printf("REST server listening at :%s", port)
