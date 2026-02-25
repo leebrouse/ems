@@ -60,6 +60,10 @@ service:
 security:
   encryption_key: "emergency-system-aes-key-32chars"
 
+observation:
+  jaeger:
+    url: "http://jaeger:14268/api/traces"
+
 gaode_maps:
   api_key: "bff42bf37382382b61e29c13b4964ad4"
   base_url: "https://restapi.amap.com"

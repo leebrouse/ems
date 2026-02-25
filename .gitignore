@@ -1,4 +1,4 @@
-backend/deploy/data/postgres
+deploy/data
 
 # Logs
 logs
