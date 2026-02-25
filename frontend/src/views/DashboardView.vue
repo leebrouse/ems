@@ -107,6 +107,7 @@ const initCharts = (
   }
 };
 
+// 兜底库存统计：逐仓库拉取库存明细并聚合
 const fetchInventoryFromWarehouses = async (): Promise<InventoryStat[]> => {
   const warehousesRes: any = await request.get("/api/v1/warehouses");
   const warehousesRaw =
@@ -152,6 +153,7 @@ const fetchInventoryFromWarehouses = async (): Promise<InventoryStat[]> => {
   return [...aggregates.values()];
 };
 
+// 优先使用 stats/inventory，失败则降级到仓库库存聚合
 const fetchInventoryStats = async (): Promise<InventoryStat[]> => {
   try {
     const inventoryStatsRes: any = await request.get("/api/v1/stats/inventory");
@@ -168,6 +170,7 @@ const fetchInventoryStats = async (): Promise<InventoryStat[]> => {
   return await fetchInventoryFromWarehouses();
 };
 
+// 拉取仪表盘所需的全部数据，并驱动图表渲染
 const fetchStats = async () => {
   try {
     const [
@@ -240,6 +243,7 @@ const fetchStats = async () => {
   }
 };
 
+// 页面加载后拉取统计数据
 onMounted(() => {
   fetchStats();
 });

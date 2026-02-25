@@ -39,6 +39,7 @@ type Shipment = {
 };
 type Warehouse = { id: number; name: string; location?: string };
 
+// 统一规范后端数据字段，避免大小写/命名不一致导致渲染失败
 const normalizeItem = (raw: any): Item => ({
   id: Number(raw?.id ?? raw?.ID ?? raw?.itemId ?? raw?.ItemID ?? 0),
   name: String(raw?.name ?? raw?.Name ?? ""),
@@ -84,6 +85,7 @@ const normalizeWarehouse = (raw: any): Warehouse => ({
   location: raw?.location ?? raw?.Location ?? undefined,
 });
 
+// 运输任务字段兼容处理：保证 shipmentId/requestId/fromWarehouseId 有值
 const normalizeShipment = (raw: any): Shipment => ({
   shipmentId: Number(
     raw?.shipmentId ?? raw?.ShipmentId ?? raw?.id ?? raw?.ID ?? 0
@@ -102,6 +104,7 @@ const normalizeShipment = (raw: any): Shipment => ({
 const authStore = useAuthStore();
 const activeTab = ref<"requests" | "shipments" | "map">("requests");
 
+// 状态码到中文标签的映射
 const statusLabelMap: Record<string, string> = {
   PENDING: "待处理",
   ASSIGNED: "已指派",
@@ -113,6 +116,7 @@ const statusLabelMap: Record<string, string> = {
 };
 
 const items = ref<Item[]>([]);
+// 物资列表：用于创建需求单/运输任务的选择项
 const loadItems = async () => {
   const res: any = await request.get("/api/v1/items", {
     params: { page: 1, size: 1000 },
@@ -122,6 +126,7 @@ const loadItems = async () => {
 };
 
 const warehouses = ref<Warehouse[]>([]);
+// 仓库列表：地图轨迹与运输任务创建使用
 const loadWarehouses = async () => {
   const res: any = await request.get("/api/v1/warehouses");
   const list = res?.warehouses ?? res?.Warehouses ?? res ?? [];
@@ -133,6 +138,7 @@ const requestsData = ref<RescueRequest[]>([]);
 const requestsTotal = ref(0);
 const requestQuery = reactive({ page: 1, size: 10, status: "" });
 
+// 需求单列表：分页 + 状态筛选
 const loadRequests = async () => {
   requestsLoading.value = true;
   try {
@@ -153,6 +159,7 @@ const shipmentsData = ref<Shipment[]>([]);
 const shipmentsTotal = ref(0);
 const shipmentQuery = reactive({ page: 1, size: 10, status: "" });
 
+// 运输任务列表：分页 + 状态筛选
 const loadShipments = async () => {
   shipmentsLoading.value = true;
   try {
@@ -181,6 +188,7 @@ const requestForm = reactive({
   items: [] as { itemId: number | null; quantity: number }[],
 });
 
+// 打开新建需求单：初始化表单
 const openCreateRequest = () => {
   requestDialogMode.value = "create";
   requestForm.id = 0;
@@ -192,6 +200,7 @@ const openCreateRequest = () => {
   requestDialogVisible.value = true;
 };
 
+// 打开编辑需求单：加载详情并填充表单
 const openEditRequest = async (row: RescueRequest) => {
   requestDialogMode.value = "edit";
   const res: any = await request.get(`/api/v1/requests/${row.id}`);
@@ -211,6 +220,7 @@ const openEditRequest = async (row: RescueRequest) => {
   requestDialogVisible.value = true;
 };
 
+// 保存需求单：创建 or 更新（状态/指派）
 const saveRequest = async () => {
   const payloadItems = requestForm.items
     .filter((it) => it.itemId != null && it.quantity > 0)
@@ -246,6 +256,7 @@ const saveRequest = async () => {
   await loadRequests();
 };
 
+// 删除需求单（仅管理员可见）
 const deleteRequest = async (row: RescueRequest) => {
   await ElMessageBox.confirm(
     `确认删除需求单 #${row.id}？仅未指派状态可删除。`,
@@ -301,6 +312,7 @@ const loadRequestForShipment = async () => {
   ElMessage.success("已加载需求单明细");
 };
 
+// 打开更新运输状态：只更新状态/位置/时间
 const openUpdateShipmentStatus = (row: Shipment) => {
   shipmentDialogMode.value = "status";
   shipmentForm.shipmentId = row.shipmentId;
@@ -310,6 +322,7 @@ const openUpdateShipmentStatus = (row: Shipment) => {
   shipmentDialogVisible.value = true;
 };
 
+// 保存运输任务：创建任务或更新运输状态
 const saveShipment = async () => {
   if (shipmentDialogMode.value === "create") {
     const payloadItems = shipmentForm.items
@@ -357,9 +370,11 @@ const saveShipment = async () => {
   }
 };
 
+// 当前地图中选择的运输任务与详情
 const selectedShipmentId = ref<number | null>(null);
 const selectedShipment = ref<Shipment | null>(null);
 
+// 高德地图实例与工具
 const mapContainer = ref<HTMLElement | null>(null);
 let map: any = null;
 let amapApi: any = null;
@@ -370,6 +385,7 @@ const drivingSummary = ref<{ distance: number; time: number } | null>(null);
 const amapKey = "0282382759b77d9371ab6f78e022bfeb";
 const amapSecurityCode = "3512fe5d4078e94b9dca5b2f2f8cb6eb";
 
+// 拉取运输任务详情（包含 tracking）
 const loadSelectedShipment = async () => {
   if (!selectedShipmentId.value) return;
   const res: any = await request.get(
@@ -378,6 +394,7 @@ const loadSelectedShipment = async () => {
   selectedShipment.value = normalizeShipment(res ?? {});
 };
 
+// 懒加载高德 JSAPI，并初始化地理编码/驾车插件
 const ensureAmapApi = async () => {
   if (amapApi) return amapApi;
   try {
@@ -406,6 +423,7 @@ const getWarehouseLocation = (warehouseId: number) => {
   return warehouse?.location ? String(warehouse.location) : "";
 };
 
+// 运输轨迹显示：优先使用 tracking，若为空则用起点/终点兜底
 const buildTrackingDisplay = (shipment: Shipment) => {
   const tracking = shipment.tracking ?? [];
   const list = tracking.map((t) => ({
@@ -425,6 +443,7 @@ const buildTrackingDisplay = (shipment: Shipment) => {
   return fallback;
 };
 
+// 轨迹路线规划：起点 + tracking + 终点（去重）
 const buildTrackingLocations = (shipment: Shipment) => {
   const fromLocation = getWarehouseLocation(shipment.fromWarehouseId);
   const toLocation = shipment.toLocation;
@@ -452,6 +471,7 @@ const trackingDisplay = computed(() =>
   selectedShipment.value ? buildTrackingDisplay(selectedShipment.value) : []
 );
 
+// 初始化地图容器与驾车实例
 const initMap = async () => {
   if (!mapContainer.value) return;
   const AMap = await ensureAmapApi();
@@ -471,6 +491,7 @@ const initMap = async () => {
   });
 };
 
+// 解析 "lng,lat" 字符串为坐标点
 const parseLocationToPoint = (loc: string) => {
   const match = loc.match(/(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)/);
   if (!match) return null;
@@ -480,17 +501,20 @@ const parseLocationToPoint = (loc: string) => {
   return [lng, lat];
 };
 
+// 统一转为 AMap 的 LngLat 实例
 const toLngLat = (AMap: any, point: any) => {
   if (Array.isArray(point)) return new AMap.LngLat(point[0], point[1]);
   return point;
 };
 
+// 驾车距离格式化（m/km）
 const formatDistanceMeters = (meters: number) => {
   if (!Number.isFinite(meters)) return "-";
   if (meters < 1000) return `${Math.round(meters)} m`;
   return `${(meters / 1000).toFixed(1)} km`;
 };
 
+// 驾车时间格式化（秒 -> 小时/分钟）
 const formatDurationSeconds = (seconds: number) => {
   if (!Number.isFinite(seconds)) return "-";
   const s = Math.max(0, Math.round(seconds));
@@ -501,6 +525,7 @@ const formatDurationSeconds = (seconds: number) => {
   return `${m} 分钟`;
 };
 
+// 地图渲染：定位轨迹 -> 驾车规划 -> marker/折线渲染
 const renderShipmentOnMap = async () => {
   if (!selectedShipment.value) return;
   if (!map) {
@@ -611,6 +636,7 @@ const renderShipmentOnMap = async () => {
 
 const canDeleteRequest = computed(() => authStore.isAdmin);
 
+// Tab 切换时按需加载数据并刷新地图
 watch(activeTab, async (tab) => {
   if (tab === "requests") await loadRequests();
   if (tab === "shipments") await loadShipments();
@@ -626,6 +652,7 @@ watch(activeTab, async (tab) => {
   }
 });
 
+// 初次进入页面：准备基础数据与需求单列表
 onMounted(async () => {
   await loadItems();
   await loadWarehouses();

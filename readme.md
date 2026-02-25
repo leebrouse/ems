@@ -2,6 +2,15 @@
 
 一个面向应急救援场景的物资管理后台：包含用户与角色（RBAC）、仓储与库存、需求申请与调度、运输状态追踪、统计看板与地图可视化。
 
+## 功能特性
+
+- 用户与角色权限（RBAC）
+- 仓储与库存管理
+- 需求申请与调度编排
+- 运输状态追踪与地图可视化
+- 统计分析看板
+- 后端可观测性（OpenTelemetry：Trace + Metrics）
+
 ## 技术栈
 
 ### 前端（frontend）
@@ -38,6 +47,13 @@
 默认配置文件（Docker 环境）：
 
 - [global.yaml](file:///root/ems/backend/internal/common/config/global.yaml)
+
+### 观测（Observation）
+
+- 统一 OTLP 上报（gRPC/HTTP），对接 Collector
+- Trace 通过 Jaeger 可视化，Metrics 暴露给 Prometheus 抓取
+- 支持 Gin / gRPC 自动埋点与上下文传播
+- Collector 配置示例：[otel-collector.yaml](file:///root/ems/backend/internal/common/observation/otel-collector.yaml)
 
 ## 环境要求
 

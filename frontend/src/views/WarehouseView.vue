@@ -178,6 +178,7 @@ const openEditItem = (row: Item) => {
   itemDialogVisible.value = true;
 };
 
+// 保存物资：创建或更新
 const saveItem = async () => {
   if (!itemForm.name || !itemForm.unit) {
     ElMessage.warning("请填写物资名称和单位");
@@ -203,6 +204,7 @@ const saveItem = async () => {
   await loadItemsOptions();
 };
 
+// 删除物资（管理员权限）
 const deleteItem = async (row: Item) => {
   await ElMessageBox.confirm(
     `确认删除物资「${row.name}」（ID: ${row.id}）？`,
@@ -235,6 +237,7 @@ const openEditWarehouse = (row: Warehouse) => {
   warehouseDialogVisible.value = true;
 };
 
+// 保存仓库：创建或更新
 const saveWarehouse = async () => {
   if (!warehouseForm.name) {
     ElMessage.warning("请填写仓库名称");
@@ -257,6 +260,7 @@ const saveWarehouse = async () => {
   await loadWarehouses();
 };
 
+// 删除仓库（管理员权限）
 const deleteWarehouse = async (row: Warehouse) => {
   await ElMessageBox.confirm(
     `确认删除仓库「${row.name}」（ID: ${row.id}）？`,
@@ -272,6 +276,7 @@ const adjustDialogVisible = ref(false);
 const adjustMode = ref<"add" | "remove">("add");
 const adjustForm = reactive({ itemId: null as number | null, amount: 1 });
 
+// 打开库存调整（入库/出库）
 const openAdjust = (mode: "add" | "remove") => {
   if (!selectedWarehouseId.value) {
     ElMessage.warning("请先选择仓库");
@@ -283,6 +288,7 @@ const openAdjust = (mode: "add" | "remove") => {
   adjustDialogVisible.value = true;
 };
 
+// 提交库存调整
 const saveAdjust = async () => {
   if (
     !selectedWarehouseId.value ||
@@ -313,12 +319,14 @@ const thresholdForm = reactive({
   threshold: 10,
 });
 
+// 设置库存预警阈值
 const openSetThreshold = () => {
   thresholdForm.itemId = null;
   thresholdForm.threshold = 10;
   thresholdDialogVisible.value = true;
 };
 
+// 保存预警阈值
 const saveThreshold = async () => {
   if (!thresholdForm.itemId || thresholdForm.threshold < 0) {
     ElMessage.warning("请选择物资并填写阈值");
@@ -333,6 +341,7 @@ const saveThreshold = async () => {
   await loadAlerts();
 };
 
+// 预警行高亮
 const alertRowClassName = ({ row }: { row: AlertRow }) => {
   if (row.quantity < row.threshold) return "warning-row";
   return "";
@@ -343,6 +352,7 @@ const canWarehouseManage = computed(
   () => authStore.isAdmin || authStore.isWarehouseManager
 );
 
+// Tab 切换时按需加载数据
 watch(activeTab, async (tab) => {
   if (tab === "items") await loadItems();
   if (tab === "warehouses") await loadWarehouses();
@@ -353,10 +363,12 @@ watch(activeTab, async (tab) => {
   if (tab === "alerts") await loadAlerts();
 });
 
+// 仓库变更时刷新库存明细
 watch(selectedWarehouseId, async () => {
   if (activeTab.value === "inventory") await loadInventory();
 });
 
+// 初次进入页面加载基础数据
 onMounted(async () => {
   await loadItems();
   await loadItemsOptions();

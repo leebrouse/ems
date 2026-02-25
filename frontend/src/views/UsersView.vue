@@ -42,6 +42,7 @@ const roleNameToLabel: Record<string, string> = {
 };
 const getRoleLabel = (role: string) => roleNameToLabel[role] || role;
 
+// 角色列表：优先使用后端数据，失败时回退默认角色
 const loadRoles = async () => {
   try {
     const res: any = await request.get("/api/v1/roles");
@@ -57,6 +58,7 @@ const loadRoles = async () => {
   }
 };
 
+// 用户列表：分页加载
 const fetchUsers = async () => {
   loading.value = true;
   try {
@@ -77,6 +79,7 @@ const form = reactive({
   roles: [] as string[],
 });
 
+// 新建用户：重置表单
 const openCreate = () => {
   dialogMode.value = "create";
   form.id = 0;
@@ -86,6 +89,7 @@ const openCreate = () => {
   dialogVisible.value = true;
 };
 
+// 编辑用户：回填基础信息
 const openEdit = (row: User) => {
   dialogMode.value = "edit";
   form.id = row.id;
@@ -95,6 +99,7 @@ const openEdit = (row: User) => {
   dialogVisible.value = true;
 };
 
+// 保存用户：创建/更新
 const save = async () => {
   if (dialogMode.value === "create") {
     if (!form.username || !form.password) {
@@ -118,6 +123,7 @@ const save = async () => {
   await fetchUsers();
 };
 
+// 删除用户：二次确认
 const removeUser = async (row: User) => {
   await ElMessageBox.confirm(
     `确认删除用户 ${row.username}（ID: ${row.id}）？`,
@@ -129,6 +135,7 @@ const removeUser = async (row: User) => {
   await fetchUsers();
 };
 
+// 初始化：加载角色与用户列表
 onMounted(() => {
   loadRoles();
   fetchUsers();
