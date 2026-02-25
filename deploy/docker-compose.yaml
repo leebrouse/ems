@@ -96,6 +96,18 @@ services:
     environment:
       COLLECTOR_OTLP_ENABLED: true
 
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ../backend/internal/common/observation/metrics/:/etc/prometheus/
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+      
   # Grafana
   # grafana:
   #   image: grafana/grafana:latest
