@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	pb "github.com/leebrouse/ems/backend/common/genproto/scheduling/grpc"
@@ -100,6 +101,15 @@ func (s *SchedulingRPCServer) CreateShipment(ctx context.Context, in *pb.CreateS
 	}
 	shipment, err := s.svc.CreateShipment(ctx, int64(in.RequestId), int64(in.FromWarehouseId), in.ToLocation, items)
 	if err != nil {
+		if errors.Is(err, service.ErrInsufficientStock) {
+			return nil, status.Error(codes.FailedPrecondition, err.Error())
+		}
+		if errors.Is(err, service.ErrInvalidShipmentItem) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		if errors.Is(err, service.ErrWarehouseClientUnavailable) {
+			return nil, status.Error(codes.Unavailable, err.Error())
+		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	return s.toShipmentResponse(shipment), nil

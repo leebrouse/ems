@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"log"
 	"net/http"
 
@@ -188,9 +189,21 @@ func (h *SchedulingHandler) CreateShipment(c *gin.Context) {
 			Quantity: qty,
 		})
 	}
-
+	// 
 	shipment, err := h.svc.CreateShipment(c.Request.Context(), int64(body.RequestId), int64(body.FromWarehouseId), body.ToLocation, items)
 	if err != nil {
+		if errors.Is(err, service.ErrInsufficientStock) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, service.ErrInvalidShipmentItem) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if errors.Is(err, service.ErrWarehouseClientUnavailable) {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

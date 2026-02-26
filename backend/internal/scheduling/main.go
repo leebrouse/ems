@@ -8,6 +8,7 @@ import (
 	"github.com/leebrouse/ems/backend/common/database"
 	"github.com/leebrouse/ems/backend/common/genopenapi/scheduling"
 	pb "github.com/leebrouse/ems/backend/common/genproto/scheduling/grpc"
+	warehousepb "github.com/leebrouse/ems/backend/common/genproto/warehouse/grpc"
 	"github.com/leebrouse/ems/backend/common/observation"
 	"github.com/leebrouse/ems/backend/scheduling/handler"
 	"github.com/leebrouse/ems/backend/scheduling/model"
@@ -41,7 +42,23 @@ func main() {
 
 	// 2. Initialize Layers
 	repo := repository.NewSchedulingRepository(db)
-	svc := service.NewSchedulingService(repo)
+	warehouseHost := viper.GetString("service.warehouse.host")
+	if warehouseHost == "" {
+		warehouseHost = "localhost"
+	}
+	warehousePort := viper.GetString("service.warehouse.grpc")
+	if warehousePort == "" {
+		warehousePort = "9002"
+	}
+	warehouseAddr := warehouseHost + ":" + warehousePort
+	wConn, err := grpc.NewClient(warehouseAddr, observation.GRPCDialOptions()...)
+	if err != nil {
+		log.Fatalf("did not connect to warehouse service: %v", err)
+	}
+	defer wConn.Close()
+	warehouseClient := warehousepb.NewWarehouseServiceClient(wConn)
+
+	svc := service.NewSchedulingService(repo, warehouseClient)
 	h := handler.NewSchedulingHandler(svc)
 	r := rpc.NewSchedulingRPCServer(svc)
 

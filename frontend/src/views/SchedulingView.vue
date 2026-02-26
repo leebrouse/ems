@@ -23,6 +23,7 @@ type RescueRequest = {
   status: string;
   items?: ItemQuantity[];
   assignedTo?: number | null;
+  createdAt?: string;
 };
 type ShipmentTracking = {
   status: string;
@@ -36,6 +37,8 @@ type Shipment = {
   toLocation: string;
   status: string;
   tracking?: ShipmentTracking[];
+  items?: ItemQuantity[];
+  createdAt?: string;
 };
 type Warehouse = { id: number; name: string; location?: string };
 
@@ -66,6 +69,12 @@ const normalizeRequest = (raw: any): RescueRequest => ({
   items: Array.isArray(raw?.items ?? raw?.Items)
     ? (raw?.items ?? raw?.Items).map(normalizeItemQuantity)
     : undefined,
+  createdAt:
+    raw?.createdAt ??
+    raw?.CreatedAt ??
+    raw?.created_at ??
+    raw?.Created_At ??
+    undefined,
 });
 
 const normalizeTracking = (raw: any): ShipmentTracking => ({
@@ -99,6 +108,15 @@ const normalizeShipment = (raw: any): Shipment => ({
   tracking: Array.isArray(raw?.tracking ?? raw?.Tracking)
     ? (raw?.tracking ?? raw?.Tracking).map(normalizeTracking)
     : undefined,
+  items: Array.isArray(raw?.items ?? raw?.Items)
+    ? (raw?.items ?? raw?.Items).map(normalizeItemQuantity)
+    : undefined,
+  createdAt:
+    raw?.createdAt ??
+    raw?.CreatedAt ??
+    raw?.created_at ??
+    raw?.Created_At ??
+    undefined,
 });
 
 const authStore = useAuthStore();
@@ -107,7 +125,7 @@ const activeTab = ref<"requests" | "shipments" | "map">("requests");
 // 状态码到中文标签的映射
 const statusLabelMap: Record<string, string> = {
   PENDING: "待处理",
-  ASSIGNED: "已指派",
+  ASSIGNED: "已批准",
   COMPLETED: "已完成",
   CANCELLED: "已取消",
   NEW: "新建",
@@ -256,6 +274,38 @@ const saveRequest = async () => {
   await loadRequests();
 };
 
+// 批准需求单：将状态更新为 ASSIGNED，并引导创建运输任务
+const approveRequest = async (row: RescueRequest) => {
+  shipmentDialogMode.value = "create";
+  shipmentForm.shipmentId = 0;
+  shipmentForm.requestId = row.id;
+  shipmentForm.fromWarehouseId = undefined;
+  shipmentForm.toLocation = row.location;
+  shipmentForm.items = (row.items ?? []).map((it) => ({
+    itemId: Number(it.itemId),
+    quantity: Number(it.quantity),
+  }));
+  if (shipmentForm.items.length === 0)
+    shipmentForm.items = [{ itemId: null, quantity: 1 }];
+
+  shipmentDialogVisible.value = true;
+  ElMessage.info("请选择发货仓库以完成批准和派单");
+};
+
+// 驳回需求单：将状态更新为 CANCELLED
+const rejectRequest = async (row: RescueRequest) => {
+  await ElMessageBox.prompt("请输入驳回原因", "驳回需求单", {
+    confirmButtonText: "确认驳回",
+    cancelButtonText: "取消",
+    inputPattern: /\S+/,
+    inputErrorMessage: "驳回原因不能为空",
+  });
+  // 暂未在后端存储原因字段，仅更新状态
+  await request.put(`/api/v1/requests/${row.id}`, { status: "CANCELLED" });
+  ElMessage.warning("需求单已驳回");
+  await loadRequests();
+};
+
 // 删除需求单（仅管理员可见）
 const deleteRequest = async (row: RescueRequest) => {
   await ElMessageBox.confirm(
@@ -341,13 +391,15 @@ const saveShipment = async () => {
       ElMessage.warning("请填写需求单ID、出发仓库、目的地和物资明细");
       return;
     }
+    // 创建时默认状态设为 IN_TRANSIT（运输中），而不是 NEW
     await request.post("/api/v1/shipments", {
       requestId: shipmentForm.requestId,
       fromWarehouseId: shipmentForm.fromWarehouseId,
       toLocation: shipmentForm.toLocation,
+      status: "IN_TRANSIT",
       items: payloadItems,
     });
-    ElMessage.success("运输任务已创建");
+    ElMessage.success("运输任务已创建并开始派送");
   } else {
     if (!shipmentForm.status) {
       ElMessage.warning("请选择状态");
@@ -368,6 +420,37 @@ const saveShipment = async () => {
     await loadSelectedShipment();
     await renderShipmentOnMap();
   }
+  if (activeTab.value === "requests") await loadRequests();
+};
+
+// 签收运输任务
+const completeShipment = async (row: Shipment) => {
+  await ElMessageBox.confirm(`确认签收运输任务 #${row.shipmentId}？`, "提示", {
+    type: "success",
+  });
+  await request.put(`/api/v1/shipments/${row.shipmentId}/status`, {
+    status: "DELIVERED",
+    location: row.toLocation, // 默认使用目的地作为签收地点
+    timestamp: new Date().toISOString(),
+  });
+  ElMessage.success("已签收");
+  await loadShipments();
+};
+
+// 拒绝签收运输任务
+const rejectShipment = async (row: Shipment) => {
+  await ElMessageBox.confirm(
+    `确认拒绝签收运输任务 #${row.shipmentId}？`,
+    "拒绝签收",
+    { type: "warning", confirmButtonText: "确认拒绝", cancelButtonText: "取消" }
+  );
+  await request.put(`/api/v1/shipments/${row.shipmentId}/status`, {
+    status: "CANCELLED",
+    location: row.toLocation,
+    timestamp: new Date().toISOString(),
+  });
+  ElMessage.warning("已拒绝签收");
+  await loadShipments();
 };
 
 // 当前地图中选择的运输任务与详情
@@ -421,6 +504,26 @@ const ensureAmapApi = async () => {
 const getWarehouseLocation = (warehouseId: number) => {
   const warehouse = warehouses.value.find((w) => w.id === warehouseId);
   return warehouse?.location ? String(warehouse.location) : "";
+};
+
+const getWarehouseName = (warehouseId: number) => {
+  const warehouse = warehouses.value.find((w) => w.id === warehouseId);
+  return warehouse ? warehouse.name : String(warehouseId);
+};
+
+const formatItems = (rowItems?: ItemQuantity[]) => {
+  if (!rowItems || rowItems.length === 0) return "-";
+  return rowItems
+    .map((it) => {
+      const item = items.value.find((i) => i.id === it.itemId);
+      return `${item?.name || it.itemId} x${it.quantity}`;
+    })
+    .join(", ");
+};
+
+const formatTime = (time?: string) => {
+  if (!time) return "-";
+  return new Date(time).toLocaleString();
 };
 
 // 运输轨迹显示：优先使用 tracking，若为空则用起点/终点兜底
@@ -635,6 +738,8 @@ const renderShipmentOnMap = async () => {
 };
 
 const canDeleteRequest = computed(() => authStore.isAdmin);
+const canManageRequest = computed(() => authStore.isAdmin);
+const isDispatcher = computed(() => authStore.isDispatcher);
 
 // Tab 切换时按需加载数据并刷新地图
 watch(activeTab, async (tab) => {
@@ -690,10 +795,10 @@ onMounted(async () => {
             style="width: 180px"
             @change="loadRequests"
           >
-            <el-option label="待处理 (PENDING)" value="PENDING" />
-            <el-option label="已指派 (ASSIGNED)" value="ASSIGNED" />
-            <el-option label="已完成 (COMPLETED)" value="COMPLETED" />
-            <el-option label="已取消 (CANCELLED)" value="CANCELLED" />
+            <el-option label="待处理" value="PENDING" />
+            <el-option label="已批准" value="ASSIGNED" />
+            <el-option label="已完成" value="COMPLETED" />
+            <el-option label="已取消" value="CANCELLED" />
           </el-select>
           <el-button :icon="RefreshCw" @click="loadRequests">刷新</el-button>
         </div>
@@ -709,22 +814,63 @@ onMounted(async () => {
           style="width: 100%"
         >
           <el-table-column prop="id" label="ID" width="90" />
-          <el-table-column prop="title" label="标题" min-width="160" />
-          <el-table-column prop="location" label="地点" min-width="120" />
-          <el-table-column prop="status" label="状态" width="140">
+          <el-table-column prop="title" label="标题" min-width="120" />
+          <el-table-column label="物资" min-width="160">
             <template #default="{ row }">
-              <el-tag effect="plain">{{
-                statusLabelMap[row.status] || row.status
-              }}</el-tag>
+              {{ formatItems(row.items) }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="170" fixed="right">
+          <el-table-column prop="location" label="地点" min-width="120" />
+          <el-table-column label="创建时间" width="180">
+            <template #default="{ row }">
+              {{ formatTime(row.createdAt) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="status" label="状态" width="140">
+            <template #default="{ row }">
+              <el-tag
+                :type="
+                  row.status === 'PENDING'
+                    ? 'warning'
+                    : row.status === 'IN_TRANSIT' || row.status === 'ASSIGNED'
+                    ? 'primary'
+                    : row.status === 'COMPLETED'
+                    ? 'success'
+                    : row.status === 'CANCELLED'
+                    ? 'info'
+                    : ''
+                "
+                effect="plain"
+                >{{ statusLabelMap[row.status] || row.status }}</el-tag
+              >
+            </template>
+          </el-table-column>
+          <el-table-column
+            label="操作"
+            width="240"
+            fixed="right"
+            v-if="canManageRequest"
+          >
             <template #default="{ row }">
               <el-button link type="primary" @click="openEditRequest(row)"
                 >查看/更新</el-button
               >
               <el-button
-                v-if="canDeleteRequest"
+                v-if="row.status === 'PENDING'"
+                link
+                type="success"
+                @click="approveRequest(row)"
+                >批准</el-button
+              >
+              <el-button
+                v-if="row.status === 'PENDING'"
+                link
+                type="warning"
+                @click="rejectRequest(row)"
+                >驳回</el-button
+              >
+              <el-button
+                v-if="canDeleteRequest && row.status === 'PENDING'"
                 link
                 type="danger"
                 @click="deleteRequest(row)"
@@ -757,14 +903,18 @@ onMounted(async () => {
             style="width: 180px"
             @change="loadShipments"
           >
-            <el-option label="新建 (NEW)" value="NEW" />
-            <el-option label="运输中 (IN_TRANSIT)" value="IN_TRANSIT" />
-            <el-option label="已送达 (DELIVERED)" value="DELIVERED" />
-            <el-option label="已取消 (CANCELLED)" value="CANCELLED" />
+            <!-- <el-option label="新建" value="NEW" /> -->
+            <el-option label="运输中" value="IN_TRANSIT" />
+            <el-option label="已送达" value="DELIVERED" />
+            <el-option label="已取消" value="CANCELLED" />
           </el-select>
           <el-button :icon="RefreshCw" @click="loadShipments">刷新</el-button>
         </div>
-        <el-button type="primary" :icon="Plus" @click="openCreateShipment"
+        <el-button
+          v-if="canManageRequest"
+          type="primary"
+          :icon="Plus"
+          @click="openCreateShipment"
           >新建运输任务</el-button
         >
       </div>
@@ -775,28 +925,70 @@ onMounted(async () => {
           v-loading="shipmentsLoading"
           style="width: 100%"
         >
-          <el-table-column prop="shipmentId" label="运输ID" width="110" />
-          <el-table-column prop="requestId" label="需求ID" width="110" />
-          <el-table-column
-            prop="fromWarehouseId"
-            label="出发仓库"
-            width="110"
-          />
-          <el-table-column prop="toLocation" label="目的地" min-width="140" />
+          <el-table-column prop="shipmentId" label="运输ID" width="90" />
+          <el-table-column prop="requestId" label="需求ID" width="90" />
+          <el-table-column label="出发仓库" min-width="120">
+            <template #default="{ row }">
+              {{ getWarehouseName(row.fromWarehouseId) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="toLocation" label="目的地" min-width="120" />
+          <el-table-column label="物资" min-width="160">
+            <template #default="{ row }">
+              {{ formatItems(row.items) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="创建时间" width="180">
+            <template #default="{ row }">
+              {{ formatTime(row.createdAt) }}
+            </template>
+          </el-table-column>
           <el-table-column prop="status" label="状态" width="140">
             <template #default="{ row }">
-              <el-tag effect="plain">{{
-                statusLabelMap[row.status] || row.status
-              }}</el-tag>
+              <el-tag
+                :type="
+                  row.status === 'NEW'
+                    ? 'info'
+                    : row.status === 'IN_TRANSIT'
+                    ? 'primary'
+                    : row.status === 'DELIVERED'
+                    ? 'success'
+                    : row.status === 'CANCELLED'
+                    ? 'info'
+                    : ''
+                "
+                effect="plain"
+                >{{ statusLabelMap[row.status] || row.status }}</el-tag
+              >
             </template>
           </el-table-column>
           <el-table-column label="操作" width="220" fixed="right">
             <template #default="{ row }">
               <el-button
+                v-if="
+                  !canManageRequest &&
+                  !isDispatcher &&
+                  row.status !== 'DELIVERED' &&
+                  row.status !== 'CANCELLED'
+                "
                 link
                 type="primary"
                 @click="openUpdateShipmentStatus(row)"
                 >更新状态</el-button
+              >
+              <el-button
+                v-if="isDispatcher && row.status === 'IN_TRANSIT'"
+                link
+                type="success"
+                @click="completeShipment(row)"
+                >确认收到</el-button
+              >
+              <el-button
+                v-if="isDispatcher && row.status === 'IN_TRANSIT'"
+                link
+                type="danger"
+                @click="rejectShipment(row)"
+                >拒绝签收</el-button
               >
               <el-button
                 link

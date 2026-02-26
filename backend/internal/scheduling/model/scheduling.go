@@ -10,6 +10,8 @@ const (
 	RequestStatusPending   RequestStatus = "PENDING"
 	// RequestStatusAssigned 已分配
 	RequestStatusAssigned  RequestStatus = "ASSIGNED"
+	// RequestStatusInTransit 运输中
+	RequestStatusInTransit RequestStatus = "IN_TRANSIT"
 	// RequestStatusCompleted 已完成
 	RequestStatusCompleted RequestStatus = "COMPLETED"
 	// RequestStatusCancelled 已取消
